@@ -12,14 +12,18 @@ object ExpressionParser {
   def number[_: P]: P[Const]      = P(CharIn("0-9").rep(1).!.map(_.toInt).map(Const))
   def identifier[_: P]: P[String] = P(CharsWhileIn("a-zA-Z")).!
   def funcApply[_: P](implicit ctx: ParseContext): P[Expression] =
-    P(identifier ~/ ("(" ~/ ((identifier ~ ")" ~ ":=" ~/ expr) | (atom ~ ")"))).?)
-      .map {
-        case (funcName, Some((varName: String, definition: Expression))) =>
-          FunDef(FuncName(funcName), Var(varName), definition)
-        case (funcName, Some(arg: Expression)) =>
-          FunRef(FuncName(funcName), arg)
-        case (varName, None) => Var(varName)
-      }
+    P(identifier).flatMap(
+      id =>
+        if (ctx.variable.contains(id)) Pass(Var(id))
+        else if (ctx.function.contains(id))
+          P("(" ~ atom ~ ")").map(expr => FunRef(FuncName(id), expr))
+        else
+          P("(" ~/ identifier ~ ")" ~ ":=").flatMap(varName =>
+            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable + varName)))
+            .map {
+              case definition =>
+                FunDef(FuncName(id), Var(varName), definition)
+          }))
   def parens[_: P](implicit ctx: ParseContext): P[Expression] =
     P("(" ~/ addSub ~ ")")
   def atom[_: P](implicit ctx: ParseContext): P[Expression] =
@@ -44,17 +48,17 @@ object ExpressionParser {
     }
   def addSub[_: P](implicit ctx: ParseContext): P[Expression] =
     P("-" ~ divMul).map(Minus(Const(0), _)) |
-    P(divMul ~ (CharIn("+\\-").! ~/ divMul).rep).map {
-      case (l, opAndRests) =>
-        opAndRests.foldLeft(l) {
-          case (acc, ("+", right)) =>
-            acc match {
-              case Sum(parts @ _*) => Sum(parts :+ right: _*)
-              case _               => Sum(acc, right)
-            }
-          case (acc, ("-", right)) => Minus(acc, right)
-        }
-    }
+      P(divMul ~ (CharIn("+\\-").! ~/ divMul).rep).map {
+        case (l, opAndRests) =>
+          opAndRests.foldLeft(l) {
+            case (acc, ("+", right)) =>
+              acc match {
+                case Sum(parts @ _*) => Sum(parts :+ right: _*)
+                case _               => Sum(acc, right)
+              }
+            case (acc, ("-", right)) => Minus(acc, right)
+          }
+      }
 
   def boolConst[_: P](implicit ctx: ParseContext): P[BoolExpression] =
     P("true".! | "false".!).map {
@@ -98,9 +102,11 @@ object ExpressionParser {
     P("if" ~/ boolAtom ~ "then" ~ addSub ~ "else" ~ addSub ~ "fi").map {
       case (cond, trueExpr, falseExpr) => IfElse(cond, trueExpr, falseExpr)
     }
-  def cases[_:P](implicit ctx: ParseContext): P[Expression] =
+  def cases[_: P](implicit ctx: ParseContext): P[Expression] =
     P("{" ~/ (boolAtom ~ ":" ~ addSub ~ ";").rep(1) ~ ":" ~/ addSub ~ "}").map {
-      case (cases, otherwise) => Cases(otherwise, cases.map{case (cond, expr) => Case(cond, expr)}:_*)
+      case (cases, otherwise) =>
+        Cases(otherwise,
+              cases.map { case (cond, expr) => Case(cond, expr) }: _*)
     }
   def expr[_: P](implicit ctx: ParseContext): P[Expression] = P(addSub ~ End)
 }
