@@ -28,6 +28,7 @@ object Evaluator {
       fastPow(b, exp)
     case Minus(from, num) => evaluate(from, ctx) - evaluate(num, ctx)
     case Div(num, denom) => evaluate(num, ctx) / evaluate(denom, ctx)
+    case Mod(num, denom) => evaluate(num, ctx) % evaluate(denom, ctx)
     case FunRef(funcName, arg) => val FunDef(_, variable, expression: Expression) = ctx.funcCtx.getOrElse(funcName
     ,throw new IllegalStateException(s"Not bound variable: $funcName (in ctx: ${ctx.numCtx})"))
       evaluate(expression, ctx.copy(numCtx = ctx.numCtx.updated(variable, evaluate(arg, ctx))))
@@ -41,6 +42,7 @@ object Evaluator {
   def evaluate(boolExpression: BoolExpression, ctx: EvalContext): Boolean = boolExpression match {
     case BoolExpression.True => true
     case BoolExpression.False => false
+    case BoolExpression.Not(expression) => !evaluate(expression, ctx)
     case BoolExpression.Or(expressions@_*) => expressions.map(evaluate(_, ctx)).reduce(_ || _)
     case BoolExpression.And(expressions@_*) => expressions.map(evaluate(_, ctx)).reduce(_ && _)
     case BoolExpression.Imply(antecedent, consequence) => !evaluate(antecedent, ctx) || evaluate(consequence, ctx)
