@@ -19,7 +19,7 @@ object ExpressionParser {
           P("(" ~ addSub ~ ")").map(expr => FunRef(FuncName(id), expr))
         else
           P("(" ~/ identifier ~ ")" ~ ":=").flatMap(varName =>
-            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable + varName)))
+            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable + varName)) ~ &(End | StringIn(";", "}", "\n")))
             .map {
               case definition =>
                 FunDef(FuncName(id), Var(varName), definition)

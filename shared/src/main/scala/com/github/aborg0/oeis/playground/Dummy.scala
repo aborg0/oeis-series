@@ -1,5 +1,6 @@
 package com.github.aborg0.oeis.playground
 
+import cats.implicits._
 import com.github.aborg0.oeis.eval.Evaluator
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.parser.ExpressionParser
@@ -8,27 +9,49 @@ import fastparse._
 import scala.language.implicitConversions
 
 object Dummy {
-  import com.github.aborg0.oeis._
   import com.github.aborg0.oeis.BoolExpression._
   import com.github.aborg0.oeis.Expression._
+  import com.github.aborg0.oeis._
   implicit def tToConst(t: T): Expression = Const(t)
 
-  private def valueAndAst(input: String,
-                          ctx: EvalContext = EvalContext(Map.empty, Map.empty))(
+  private def valueAndAst(
+      inputs: Seq[String],
+      ctx: EvalContext = EvalContext(Map.empty, Map.empty)) /*(
       expr: P[_] => P[Expression] = ExpressionParser.expr(_, fromEvalContext(ctx))
-  ): Either[String, (T, Expression)] = {
-    val parsedAst: Parsed[Expression] = parse(input, expr)
-    (parsedAst match {
-      case Parsed.Success(expr, _) =>
-             Right[String, Expression](expr)
-      case failure: Parsed.Failure => Left[String, Expression](failure.trace(true).longMsg)
-    }).map(ast => (Evaluator.evaluate(ast, ctx), ast))
+  )*/: (Seq[(String, Int)], Seq[(Option[T], Expression)]) = {
+    val (parsed, failed) = inputs
+      .foldLeft((Seq.empty[Either[String, Expression]], fromEvalContext(ctx))) {
+        case ((acc, currCtx), input) =>
+          val parsedAst: Parsed[Expression] =
+            parse(input, ExpressionParser.expr(_, currCtx))
+          (parsedAst match {
+            case Parsed.Success(expr, _) =>
+              (acc :+ Right[String, Expression](expr), expr match {
+                case FunDef(name, _, _) =>
+                  currCtx.copy(function = currCtx.function + name.name)
+                case _ => currCtx
+              })
+            case failure: Parsed.Failure =>
+              (acc :+ Left[String, Expression](failure.trace(true).longMsg), currCtx)
+          })
+      }._1
+      .zipWithIndex
+      .partition(_._1.isRight)
+    failed.collect { case (Left(str), idx) => str -> idx } -> {
+      val asts = parsed.collect { case (Right(ast), _) => ast }
+      Evaluator.evaluate(asts, ctx)._1.zip(asts)
+    }
+//        .map(ast => (Evaluator.evaluate(ast, ctx), ast))
   }
 
-  private def printValueAndAst(input: String,
-                               ctx: EvalContext = EvalContext(Map.empty, Map.empty))(
-                                expr: P[_] => P[Expression] = ExpressionParser.expr(_, fromEvalContext(ctx))): Unit = {
-    println(valueAndAst(input, ctx)(expr).map{case (v, ast) => (s"$input=$v ", ast)})
+  private def printValueAndAst(inputs: Seq[String],
+                               ctx: EvalContext =
+                                 EvalContext(Map.empty, Map.empty))/*(
+      expr: P[_] => P[Expression] =
+        ExpressionParser.expr(_, fromEvalContext(ctx)))*/: Unit = {
+    println(inputs)
+    val (errors, results) = valueAndAst(inputs, ctx)//(expr)
+    println(s"$errors   ${results.map { case (v, ast) => (s"$v ", ast) }}")
   }
 
   def main(args: Array[String]): Unit = {
@@ -70,15 +93,21 @@ object Dummy {
       ))
     println(Evaluator.evaluate(FunRef(FuncName("fib"), 7), ctxWithFib))
 
-    printValueAndAst("2+3*4")()
-    printValueAndAst("2+3+1")()
-//    printValueAndAst("fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}")()
-//    printValueAndAst("fib(n) := if n = 0 then 0 else if n = 1 then 1 else fib(n-1) + fib(n-2) fi fi")()
-    printValueAndAst("fib(n+1)", ctx = ctxWithFib.copy(numCtx = Map(Var("n")->3)))()
-    printValueAndAst("fib(7)", ctx = ctxWithFib)()
-    printValueAndAst("2^fib(7)", ctx = ctxWithFib)()
-    printValueAndAst("if true | false | 3>2 then 44 else 2 fi")()
-    printValueAndAst("{2>3: 33; 5 = 3: 22; true: {2< 0: 1111;: 2}; true: 1; : 11}")()
-//    printValueAndAst("sign(x) := {x > 0: 1; x = 0: 0; : -1}")()
+    printValueAndAst(Seq("2+3*4"))//()
+    printValueAndAst(Seq("2+3+1"))//()
+    printValueAndAst(
+      Seq("fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}", "fib(11)"))//()
+    printValueAndAst(
+      Seq("fib(n) := if n = 0 then 0 else if n = 1 then 1 else fib(n-1) + fib(n-2) fi fi",
+          "fib(10)"))//()
+    printValueAndAst(Seq("fib(n+1)"),
+                     ctx = ctxWithFib.copy(numCtx = Map(Var("n") -> 3)))//()
+    printValueAndAst(Seq("fib(7)"), ctx = ctxWithFib)//()
+    printValueAndAst(Seq("2^fib(7)"), ctx = ctxWithFib)//()
+    printValueAndAst(Seq("if true | false | 3>2 then 44 else 2 fi"))//()
+    printValueAndAst(
+      Seq("{2>3: 33; 5 = 3: 22; true: {2< 0: 1111;: 2}; true: 1; : 11}"))//()
+    printValueAndAst(
+      Seq("sign(x) := {x > 0: 1; x = 0: 0; : -1}", "sign(2)", "sign(-2)"))//()
   }
 }
