@@ -16,7 +16,7 @@ object ExpressionParser {
       id =>
         if (ctx.variable.contains(id)) Pass(Var(id))
         else if (ctx.function.contains(id))
-          P("(" ~ atom ~ ")").map(expr => FunRef(FuncName(id), expr))
+          P("(" ~ addSub ~ ")").map(expr => FunRef(FuncName(id), expr))
         else
           P("(" ~/ identifier ~ ")" ~ ":=").flatMap(varName =>
             P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable + varName)))

@@ -72,7 +72,9 @@ object Dummy {
 
     printValueAndAst("2+3*4")()
     printValueAndAst("2+3+1")()
-    printValueAndAst("fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}")()
+//    printValueAndAst("fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}")()
+//    printValueAndAst("fib(n) := if n = 0 then 0 else if n = 1 then 1 else fib(n-1) + fib(n-2) fi fi")()
+    printValueAndAst("fib(n+1)", ctx = ctxWithFib.copy(numCtx = Map(Var("n")->3)))()
     printValueAndAst("fib(7)", ctx = ctxWithFib)()
     printValueAndAst("2^fib(7)", ctx = ctxWithFib)()
     printValueAndAst("if true | false | 3>2 then 44 else 2 fi")()

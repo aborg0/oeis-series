@@ -16,12 +16,12 @@ lazy val root = project.in(file(".")).
 
 enablePlugins(ScalaJSBundlerPlugin)
 enablePlugins(ScalablyTypedConverterPlugin)
-//useYarn := true
-//Compile / npmDependencies ++= Seq(
-//  "vega" -> "5.10.1",
-//  "vega-typings" -> "0.15.0",
-//  //  "@types/vega" -> "5.10.1"
-//)
+useYarn := true
+Compile / npmDependencies ++= Seq(
+  "vega" -> "5.10.1",
+  "vega-typings" -> "0.15.0",
+  //  "@types/vega" -> "5.10.1"
+)
 
 lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   settings(
@@ -38,6 +38,7 @@ lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   jsSettings(
     // Add JS-specific settings here
     scalaJSUseMainModuleInitializer := true,
+//    libraryDependencies += "org.scalablytyped" %%% "vega-typings" % "0.15.0-f9e28c",
 //    libraryDependencies += ScalablyTyped.V.vega,
 //    libraryDependencies += ScalablyTyped.D.d3,
   )
