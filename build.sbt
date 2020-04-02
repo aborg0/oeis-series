@@ -37,10 +37,20 @@ lazy val oeisSeriesJS = oeisSeries.js
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalablyTypedConverterPlugin)
   .settings(
-    //.useYarn := true
+    useYarn := true,
+    // This is a bit of mess. In case you face problems resolving on IDEA import, probably a wrong state was cached.
+    // In that case please add a new dependency and reimport
+    // Do not forget to run oeisSeriesJS/fastOptJS::webpack too after dependency changes!
     Compile / npmDependencies ++= Seq(
-      "vega" -> "5.10.1",
-      "vega-typings" -> "0.15.0",
-      //  "@types/vega" -> "5.10.1"
-    )
+//      "vega" -> "5.10.1",
+      "chart.js" -> "2.9.3",
+      "font-awesome" -> "4.7.0",
+      "@types/chart.js" -> "2.9.18",
+    ),
+    Compile / npmDevDependencies ++= Seq(
+//      "vega-typings" -> "0.15.0",
+      //  "@types/vega" -> "5.10.1",
+    ),
+    libraryDependencies += "com.raquo" %%% "laminar" % "0.8.0",
+//    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.0.0",
   )

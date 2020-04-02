@@ -1,6 +1,5 @@
 package com.github.aborg0.oeis.playground
 
-import cats.implicits._
 import com.github.aborg0.oeis.eval.Evaluator
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.parser.ExpressionParser
