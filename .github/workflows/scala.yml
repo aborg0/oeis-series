@@ -64,3 +64,5 @@ jobs:
 #        commit_message: # optional
         # Write the given domain name to the CNAME file
 #        fqdn: # optional
+      env:
+        GITHUB_PAT: ${{ secrets.PAT_TOKEN }}
