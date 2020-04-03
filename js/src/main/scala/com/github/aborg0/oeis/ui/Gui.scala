@@ -1,7 +1,7 @@
 package com.github.aborg0.oeis.ui
 
 import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef}
-import com.github.aborg0.oeis.eval.{Evaluator, EvaluatorMemo}
+import com.github.aborg0.oeis.eval.EvaluatorMemo
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.parser.ExpressionParser
 import com.raquo.laminar.api.L._
@@ -13,6 +13,9 @@ import typings.chartJs.mod._
 //import typings.vegaTypings._
 //import typings.vegaTypings.dataMod.Data
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters._
+import scala.scalajs.js.|
+import scala.scalajs.js.|._
 
 object Gui {
   def appendPar(targetNode: dom.Node, text: String): Unit = {
@@ -35,14 +38,17 @@ object Gui {
 
   class InputBox private ( // create instances of InputBox using InputBox.apply only
       val node: Div, // consumers should add this element into the tree
-      val inputNode: Input // consumers can subscribe to events coming from this element
+      val inputNode: Input, // consumers can subscribe to events coming from this element
+//      val valueVar: Var[String]
   )
 
   object InputBox {
     def apply(caption: String): InputBox = {
-      val inputNode = input(typ := "text")
+//      val valueVar = Var("")
+      val inputNode: Input = input(typ := "text")
+//      inputNode.amend(onInput --> valueVar.writer)
       val node      = div(caption, inputNode)
-      new InputBox(node, inputNode)
+      new InputBox(node, inputNode/*, valueVar*/)
     }
   }
 
@@ -53,15 +59,50 @@ object Gui {
 
 
     val formulaBox = InputBox("Formula")
-    val formulaStream: EventStream[String] =
-      formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value)
+    val formulaBus: EventBus[String] = new EventBus()
+    val formulaStream: EventStream[String] = formulaBus.events
 
-    val parsedFormulaStream = formulaStream.map(
-      ExpressionParser.parseFormula(_)())
+    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
+
+    val parsedFormulaStream = formulaBus.events.map(ExpressionParser.parseFormula(_)())
     val evaluator = EvaluatorMemo()
+    lazy val chart = new ^(
+      document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement],
+      ChartConfiguration(
+        ChartData(
+          js.Array[ChartDataSets](
+            ChartDataSets(
+              label = name.name,
+              backgroundColor = "rgb(0, 0, 0)",
+              //                            borderColor = "yellow",
+              `type` = ChartType.scatter,
+              data =
+                js.Array()
+              ,
+              fill = false,
+            ),
+            //            ChartDataSets(label = "X2",
+            //                          `type` = ChartType.line,
+            //                          data = js.Array(5d, 2d, 3d),
+            //                          fill = false),
+          ),
+          labels = js.Array(labelsKeys.map(_.toString): _*)
+        ),
+        ChartOptions(),
+        js.Array[PluginServiceRegistrationOptions](),
+        `type` = ChartType.line
+      )
+    )
+
+    val sampleFormula = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
+    val useFib = button("Use fib")
+
+    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
+
     val formulaDiv = div(
       formulaBox.node,
-      span("Example: fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"),
+      span(s"Example: $sampleFormula"),
+      span(useFib),
       div(
         child.text <-- parsedFormulaStream.collect{
             case Parsed.Success(value, index) => ""
@@ -70,44 +111,23 @@ object Gui {
         ),
       canvas(id := "innerCanvas"),
       child.text <-- parsedFormulaStream.collect {
-        case Parsed.Success(fun@FunDef(name, variable, expression), index) => new ^(
-          document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement],
-          ChartConfiguration(
-            ChartData(
-              js.Array[ChartDataSets](
-                ChartDataSets(
-                  label = name.name,
-                  backgroundColor = "rgb(0, 0, 0)",
-                  //                            borderColor = "yellow",
-                  `type` = ChartType.scatter,
-                  data =
-                    js.Array(labelsKeys.map {
-                      v => evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble
-                    }: _*)
-                  ,
-                  fill = false,
-                ),
-                //            ChartDataSets(label = "X2",
-                //                          `type` = ChartType.line,
-                //                          data = js.Array(5d, 2d, 3d),
-                //                          fill = false),
-              ),
-              labels = js.Array(labelsKeys.map(_.toString): _*)
-            ),
-            ChartOptions(),
-            js.Array[PluginServiceRegistrationOptions](),
-            `type` = ChartType.line
-          )
-        )
+        case Parsed.Success(fun@FunDef(name, variable, expression), index) =>
+          chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map {
+            v => evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble
+          :scala.scalajs.js.UndefOr[typings.chartJs.mod.ChartPoint | Double | Null]}: _*)).orUndefined
+          chart.update()
         ""
         case _ =>
-          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")
-          ctx.fillStyle="#FFFFFF"
-          ctx.fillRect(0, 0, 3000, 1000)
+//          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")
+//          ctx.fillStyle="#FFFFFF"
+//          ctx.fillRect(0, 0, 3000, 1000)
+          chart.data.datasets.get(0).data = Some(js.Array[scala.scalajs.js.UndefOr[typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
+          chart.update()
           ""
       }
 
     )
+
     render(document.getElementById("main"), formulaDiv)
 
     val content: js.Array[js.Any] = js.Array[js.Any](1, 2, 6, 4).map { v =>
