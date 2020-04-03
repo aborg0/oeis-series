@@ -9,6 +9,10 @@ import fastparse._
 object ExpressionParser {
   case class ParseContext(variable: Set[String], function: Set[String])
 
+  object ParseContext {
+    val empty: ParseContext = ParseContext(Set.empty, Set.empty)
+  }
+
   def number[_: P]: P[Const]      = P(CharIn("0-9").rep(1).!.map(_.toInt).map(Const))
   def identifier[_: P]: P[String] = P(CharsWhileIn("a-zA-Z")).!
   def funcApply[_: P](implicit ctx: ParseContext): P[Expression] =
@@ -109,4 +113,6 @@ object ExpressionParser {
               cases.map { case (cond, expr) => Case(cond, expr) }: _*)
     }
   def expr[_: P](implicit ctx: ParseContext): P[Expression] = P(addSub ~ End)
+
+  def parseFormula(str: String)(ctx: ParseContext = ParseContext.empty): Parsed[Expression] = parse(str, expr(_, ctx))
 }

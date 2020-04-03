@@ -51,6 +51,7 @@ lazy val oeisSeriesJS = oeisSeries.js
 //      "vega-typings" -> "0.15.0",
       //  "@types/vega" -> "5.10.1",
     ),
+    version in webpack := "4.42.1",
     libraryDependencies += "com.raquo" %%% "laminar" % "0.8.0",
 //    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.0.0",
   )
