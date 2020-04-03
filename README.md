@@ -1,0 +1,3 @@
+# oeis-series
+
+**WIP**
