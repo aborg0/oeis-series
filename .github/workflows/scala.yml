@@ -19,3 +19,48 @@ jobs:
         java-version: 11
     - name: Run tests
       run: sbt test
+    - name: fastOptJS
+      run: sbt oeisSeriesJS/fastOptJS::webpack
+    - name: Copy to public
+      run: |
+        mkdir -p public/src/test/html
+        mkdir -p public/target/scala-2.13/scalajs-bundler/main
+        cp js/src/test/html/index-dev.html public/src/test/html/index-dev.html
+        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js
+        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js.map public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js.map
+        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js
+        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js.map public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js.map
+        cat > public/index.html <<EOL
+                  <!doctype html>
+                  <html>
+                    <head>
+                      <title>GitHub Pages deployed!</title>
+                    </head>
+                    <body>
+                      <p>GitHub Pages with <strong>${{ github.sha }}</strong> commit ID has been deployed through <a href="https://github.com/marketplace/actions/github-pages">GitHub Pages action</a> successfully.</p>
+                      <p><a href="src/main/test/html/index-dev.html">DEV version</a> is available! $#x1F9D0;</p>
+                    </body>
+                  </html>
+                  EOL
+    - name: GitHub Pages
+      if: success()
+      uses: crazy-max/ghaction-github-pages@v1.3.0
+      with:
+        # GitHub repository where assets will be deployed (default current)
+#        repo: # optional
+        # Git branch where assets will be deployed
+#        target_branch: # optional, default is gh-pages
+        # Create incremental commit instead of doing push force
+#        keep_history: # optional, default is false
+        # Allow an empty commit to be created
+#        allow_empty_commit: # optional, default is true
+        # Build directory to deploy
+        build_dir: public
+        # Commit author's name
+#        committer_name: # optional
+        # Commit author's email
+#        committer_email: # optional
+        # Commit message
+#        commit_message: # optional
+        # Write the given domain name to the CNAME file
+#        fqdn: # optional
