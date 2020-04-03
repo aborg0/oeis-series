@@ -12,13 +12,16 @@ lazy val root = project.in(file(".")).
     publishLocal := {},
   )
 
+val monocleVersion = "2.0.4"
 
 lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   settings(
     name := "oeis-series",
     version := "0.1-SNAPSHOT",
     libraryDependencies += "com.lihaoyi" %%% "fastparse" % "2.2.4",
-    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core" % "2.0.4",
+    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
+    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
+    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-law" % monocleVersion % "test",
     libraryDependencies += "org.scalactic" %%% "scalactic" % "3.1.1",
     libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test",
   ).

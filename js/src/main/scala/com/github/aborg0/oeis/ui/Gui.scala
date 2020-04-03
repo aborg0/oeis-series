@@ -1,7 +1,7 @@
 package com.github.aborg0.oeis.ui
 
 import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef}
-import com.github.aborg0.oeis.eval.Evaluator
+import com.github.aborg0.oeis.eval.{Evaluator, EvaluatorMemo}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.parser.ExpressionParser
 import com.raquo.laminar.api.L._
@@ -49,7 +49,7 @@ object Gui {
   def main(args: Array[String]): Unit = {
     println("Hello world")
     appendPar(document.getElementById("main"), "Hello World")
-    val labelsKeys= 1 to 14
+    val labelsKeys= 1 to 44
 
 
     val formulaBox = InputBox("Formula")
@@ -58,6 +58,7 @@ object Gui {
 
     val parsedFormulaStream = formulaStream.map(
       ExpressionParser.parseFormula(_)())
+    val evaluator = EvaluatorMemo()
     val formulaDiv = div(
       formulaBox.node,
       span("Example: fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"),
@@ -81,7 +82,7 @@ object Gui {
                   `type` = ChartType.scatter,
                   data =
                     js.Array(labelsKeys.map {
-                      v => Evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble
+                      v => evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble
                     }: _*)
                   ,
                   fill = false,

@@ -1,11 +1,15 @@
 package com.github.aborg0.oeis.eval
 
 import com.github.aborg0.oeis.Expression._
+import com.github.aborg0.oeis.eval.Evaluator.EvalContext
+import com.github.aborg0.oeis.eval.EvaluatorMemo.MemoizedContext
 import com.github.aborg0.oeis.{BoolExpression, Expression}
+import monocle._
+import monocle.macros._
 
-object Evaluator {
-  case class EvalContext(numCtx: Map[Var, T], funcCtx: Map[FuncName, FunDef])
-  def evaluate(expressions: Seq[Expression],
+abstract class Evaluator {
+  // Possibly non-thread-safe
+  final def evaluate(expressions: Seq[Expression],
                ctx: EvalContext): (Seq[Option[Expression.T]], EvalContext) =
     expressions.foldLeft((Seq.empty[Option[Expression.T]], ctx)) {
       case ((res, currCtx), expr) =>
@@ -16,7 +20,8 @@ object Evaluator {
           case _ => (res :+ Some(evaluate(expr, currCtx))) -> currCtx
         }
     }
-  def evaluate(expression: Expression, ctx: EvalContext): Expression.T =
+  // Possibly non-thread-safe
+  final def evaluate(expression: Expression, ctx: EvalContext): Expression.T =
     expression match {
       case Const(t) => t
       case variable @ Var(v) =>
@@ -47,14 +52,8 @@ object Evaluator {
       case Div(num, denom)  => evaluate(num, ctx) / evaluate(denom, ctx)
       case Mod(num, denom)  => evaluate(num, ctx) % evaluate(denom, ctx)
       case FunRef(funcName, arg) =>
-        val FunDef(_, variable, expression: Expression) = ctx.funcCtx.getOrElse(
-          funcName,
-          throw new IllegalStateException(
-            s"Not bound variable: $funcName (in ctx: ${ctx.numCtx})"))
-        evaluate(
-          expression,
-          ctx.copy(numCtx = ctx.numCtx.updated(variable, evaluate(arg, ctx))))
-//    case Apply(variable, value, expression) => evaluate(expression, ctx.copy(numCtx = ctx.numCtx.updated(variable, value)))
+        evaluateFunction(ctx, funcName, arg)
+      //    case Apply(variable, value, expression) => evaluate(expression, ctx.copy(numCtx = ctx.numCtx.updated(variable, value)))
       case IfElse(pred, trueValue, falseValue) =>
         evaluate(if (evaluate(pred, ctx)) trueValue else falseValue, ctx)
       case Cases(base, cases @ _*) =>
@@ -70,7 +69,18 @@ object Evaluator {
         )
     }
 
-  def evaluate(boolExpression: BoolExpression, ctx: EvalContext): Boolean =
+  protected def evaluateFunction(ctx: EvalContext, funcName: FuncName, arg: Expression): T = {
+    val FunDef(_, variable, expression: Expression) = ctx.funcCtx.getOrElse(
+      funcName,
+      throw new IllegalStateException(
+        s"Not bound variable: $funcName (in ctx: ${ctx.numCtx})"))
+    evaluate(
+      expression,
+      ctx.copy(numCtx = ctx.numCtx.updated(variable, evaluate(arg, ctx))))
+  }
+
+  // Possibly non-thread-safe
+  final def evaluate(boolExpression: BoolExpression, ctx: EvalContext): Boolean =
     boolExpression match {
       case BoolExpression.True            => true
       case BoolExpression.False           => false
@@ -92,4 +102,8 @@ object Evaluator {
       case BoolExpression.GreaterOrEqual(left, right) =>
         evaluate(left, ctx) >= evaluate(right, ctx)
     }
+}
+
+object Evaluator extends Evaluator {
+  case class EvalContext(numCtx: Map[Var, T], funcCtx: Map[FuncName, FunDef])
 }
