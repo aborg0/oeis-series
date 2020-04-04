@@ -39,16 +39,18 @@ object Gui {
   class InputBox private ( // create instances of InputBox using InputBox.apply only
       val node: Div, // consumers should add this element into the tree
       val inputNode: Input, // consumers can subscribe to events coming from this element
+      val bus: EventBus[String]
 //      val valueVar: Var[String]
   )
 
   object InputBox {
     def apply(caption: String): InputBox = {
 //      val valueVar = Var("")
-      val inputNode: Input = input(typ := "text")
+      val bus = new EventBus[String]()
+      val inputNode: Input = input(typ := "text", value <-- bus.events)
 //      inputNode.amend(onInput --> valueVar.writer)
       val node      = div(caption, inputNode)
-      new InputBox(node, inputNode/*, valueVar*/)
+      new InputBox(node, inputNode/*, valueVar*/, bus)
     }
   }
 
@@ -59,12 +61,12 @@ object Gui {
 
 
     val formulaBox = InputBox("Formula")
-    val formulaBus: EventBus[String] = new EventBus()
-    val formulaStream: EventStream[String] = formulaBus.events
+//    val formulaBus: EventBus[String] = new EventBus()
+//    val formulaStream: EventStream[String] = formulaBus.events
 
-    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
+    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
 
-    val parsedFormulaStream = formulaBus.events.map(ExpressionParser.parseFormula(_)())
+    val parsedFormulaStream = formulaBox.bus.events.map(ExpressionParser.parseFormula(_)())
     val evaluator = EvaluatorMemo()
     lazy val chart = new ^(
       document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement],
@@ -96,8 +98,7 @@ object Gui {
 
     val sampleFormula = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
     val useFib = button("Use fib")
-
-    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
+    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
     val formulaDiv = div(
       formulaBox.node,

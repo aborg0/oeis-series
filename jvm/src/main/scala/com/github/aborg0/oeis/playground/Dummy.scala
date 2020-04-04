@@ -1,6 +1,6 @@
 package com.github.aborg0.oeis.playground
 
-import com.github.aborg0.oeis.eval.Evaluator
+import com.github.aborg0.oeis.eval.{Evaluator, EvaluatorMemo}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.parser.ExpressionParser
 import fastparse._
@@ -101,6 +101,7 @@ object Dummy {
           "fib(10)"))//()
     printValueAndAst(Seq("fib(n+1)"),
                      ctx = ctxWithFib.copy(numCtx = Map(Var("n") -> 3)))//()
+    println(EvaluatorMemo(ctxWithFib).evaluate(FunRef(FuncName("fib"), 44), ctxWithFib))
     printValueAndAst(Seq("fib(7)"), ctx = ctxWithFib)//()
     printValueAndAst(Seq("2^fib(7)"), ctx = ctxWithFib)//()
     printValueAndAst(Seq("if true | false | 3>2 then 44 else 2 fi"))//()
