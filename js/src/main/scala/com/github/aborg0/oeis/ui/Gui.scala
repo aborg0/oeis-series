@@ -47,7 +47,7 @@ object Gui {
     def apply(caption: String): InputBox = {
 //      val valueVar = Var("")
       val bus = new EventBus[String]()
-      val inputNode: Input = input(typ := "text", value <-- bus.events)
+      val inputNode: Input = input(typ := "text", value <-- bus.events, inContext(node => node.events(onInput).mapTo(node.ref.value) --> bus.writer))
 //      inputNode.amend(onInput --> valueVar.writer)
       val node      = div(caption, inputNode)
       new InputBox(node, inputNode/*, valueVar*/, bus)
@@ -64,7 +64,7 @@ object Gui {
 //    val formulaBus: EventBus[String] = new EventBus()
 //    val formulaStream: EventStream[String] = formulaBus.events
 
-    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
+//    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
 
     val parsedFormulaStream = formulaBox.bus.events.map(ExpressionParser.parseFormula(_)())
     val evaluator = EvaluatorMemo()
@@ -97,8 +97,8 @@ object Gui {
     )
 
     val sampleFormula = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
-    val useFib = button("Use fib")
-    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
+    val useFib = button("Use fib", onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
+//    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
     val formulaDiv = div(
       formulaBox.node,
@@ -110,7 +110,7 @@ object Gui {
             case failure: Parsed.Failure      => failure.trace().longMsg
           }
         ),
-      canvas(id := "innerCanvas"),
+      canvas(idAttr := "innerCanvas"),
       child.text <-- parsedFormulaStream.collect {
         case Parsed.Success(fun@FunDef(name, variable, expression), index) =>
           chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map {
