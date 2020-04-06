@@ -10,6 +10,8 @@ import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
+
+import scala.util.Try
 //import typings.vegaTypings._
 //import typings.vegaTypings.dataMod.Data
 import scala.scalajs.js
@@ -55,7 +57,6 @@ object Gui {
   }
 
   def main(args: Array[String]): Unit = {
-    println("Hello world")
     appendPar(document.getElementById("main"), "Hello World")
     val labelsKeys= 1 to 44
 
@@ -97,13 +98,14 @@ object Gui {
     )
 
     val sampleFormula = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
+    val optimistFormula = "optimist(n):=n^3-33*n^2"
     val useFib = button("Use fib", onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
 //    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
     val formulaDiv = div(
       formulaBox.node,
-      span(s"Example: $sampleFormula"),
-      span(useFib),
+      div(span(s"Example: "), span(cls := "formula", sampleFormula), span(useFib)),
+      div(span(cls:= "formula", optimistFormula), span(button("Use smile", onClick.mapToValue(optimistFormula) --> formulaBox.bus.writer))),
       div(
         child.text <-- parsedFormulaStream.collect{
             case Parsed.Success(value, index) => ""
@@ -114,8 +116,9 @@ object Gui {
       child.text <-- parsedFormulaStream.collect {
         case Parsed.Success(fun@FunDef(name, variable, expression), index) =>
           chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map {
-            v => evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble
+            v => Try(evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble).toOption.orUndefined
           :scala.scalajs.js.UndefOr[typings.chartJs.mod.ChartPoint | Double | Null]}: _*)).orUndefined
+          chart.data.datasets.get(0).label = name.name
           chart.update()
         ""
         case _ =>
