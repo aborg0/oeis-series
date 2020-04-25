@@ -109,5 +109,6 @@ object Dummy {
       Seq("{2>3: 33; 5 = 3: 22; true: {2< 0: 1111;: 2}; true: 1; : 11}"))//()
     printValueAndAst(
       Seq("sign(x) := {x > 0: 1; x = 0: 0; : -1}", "sign(2)", "sign(-2)"))//()
+    printValueAndAst(Seq("1!+2!", "4!", "3!!", "(3!)!", "A000142(5)"), EvalContext.withSupportedFunctions)
   }
 }

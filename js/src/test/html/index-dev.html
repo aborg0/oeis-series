@@ -28,51 +28,6 @@
     <canvas id="dummyCanvas" width="400" height="400"></canvas>
 </div>
 <div id="view"></div>
-<script type="text/javascript">
-
-//    new Promise(function(resolve, reject) {
-//let parsed = vega.parse({   "$schema": "https://vega.github.io/schema/vega/v5.json",   "description": "A basic bar chart example, with value labels shown upon mouse hover.",   "width": 400,   "height": 200,   "padding": 5,    "data": [     {       "name": "table",       "values": [         {"category": "A", "amount": 28},         {"category": "B", "amount": 55},         {"category": "C", "amount": 43},         {"category": "D", "amount": 91},         {"category": "E", "amount": 81},         {"category": "F", "amount": 53},         {"category": "G", "amount": 19},         {"category": "H", "amount": 87}       ]     }   ],    "signals": [     {       "name": "tooltip",       "value": {},       "on": [         {"events": "rect:mouseover", "update": "datum"},         {"events": "rect:mouseout",  "update": "{}"}       ]     }   ],    "scales": [     {       "name": "xscale",       "type": "band",       "domain": {"data": "table", "field": "category"},       "range": "width",       "padding": 0.05,       "round": true     },     {       "name": "yscale",       "domain": {"data": "table", "field": "amount"},       "nice": true,       "range": "height"     }   ],    "axes": [     { "orient": "bottom", "scale": "xscale" },     { "orient": "left", "scale": "yscale" }   ],    "marks": [     {       "type": "rect",       "from": {"data":"table"},       "encode": {         "enter": {           "x": {"scale": "xscale", "field": "category"},           "width": {"scale": "xscale", "band": 1},           "y": {"scale": "yscale", "field": "amount"},           "y2": {"scale": "yscale", "value": 0}         },         "update": {           "fill": {"value": "steelblue"}         },         "hover": {           "fill": {"value": "red"}         }       }     },     {       "type": "text",       "encode": {         "enter": {           "align": {"value": "center"},           "baseline": {"value": "bottom"},           "fill": {"value": "#333"}         },         "update": {           "x": {"scale": "xscale", "signal": "tooltip.category", "band": 0.5},           "y": {"scale": "yscale", "signal": "tooltip.amount", "offset": -2},           "text": {"signal": "tooltip.amount"},           "fillOpacity": [             {"test": "datum === tooltip", "value": 0},             {"value": 1}           ]         }       }     }   ] })
-//      let view3 = new vega.View(parsed, {
-//        renderer:  'canvas',  // renderer (canvas or svg)
-//        container: '#dummy',   // parent DOM container
-//        hover:     true       // enable hover processing
-//      });
-//      /*resolve(*/view3.runAsync()/*)*/;
-    //  });
-
-/*    fetch('https://vega.github.io/vega/examples/bar-chart.vg.json')
-      .then(res => res.json())
-      .then(spec => render(spec))
-      .catch(err => console.error(err));*/
-
-//      let parsed = vega.parse(spec);
-/*      let parsed = vega.parse({   "$schema": "https://vega.github.io/schema/vega/v5.json",   "description": "A basic bar chart example, with value labels shown upon mouse hover.",   "width": 400,   "height": 200,   "padding": 5,
-      "data": [     {       "name": "table",       "values": [
-      //{"category": "A", "amount": 28},         {"category": "B", "amount": 55},         {"category": "C", "amount": 43},         {"category": "D", "amount": 91},         {"category": "E", "amount": 81},         {"category": "F", "amount": 53},         {"category": "G", "amount": 19},         {"category": "H", "amount": 87}
-      {"category": "A", "amount": 1}, {"category": "B", "amount": 2}, {"category": "C", "amount": 7}, {"category": "D", "amount": 3}
-      ]
-        }   ],
-
-      "signals": [     {       "name": "tooltip",       "value": {},       "on": [         {"events": "rect:mouseover", "update": "datum"},         {"events": "rect:mouseout",  "update": "{}"}       ]     }   ],    "scales": [     {       "name": "xscale",       "type": "band",       "domain": {"data": "table", "field": "category"},       "range": "width",       "padding": 0.05,       "round": true     },     {       "name": "yscale",       "domain": {"data": "table", "field": "amount"},       "nice": true,       "range": "height"     }   ],    "axes": [     { "orient": "bottom", "scale": "xscale" },     { "orient": "left", "scale": "yscale" }   ],    "marks": [     {       "type": "rect",       "from": {"data":"table"},       "encode": {         "enter": {           "x": {"scale": "xscale", "field": "category"},           "width": {"scale": "xscale", "band": 1},           "y": {"scale": "yscale", "field": "amount"},           "y2": {"scale": "yscale", "value": 0}         },         "update": {           "fill": {"value": "steelblue"}         },         "hover": {           "fill": {"value": "red"}         }       }     },     {       "type": "text",       "encode": {         "enter": {           "align": {"value": "center"},           "baseline": {"value": "bottom"},           "fill": {"value": "#333"}         },         "update": {           "x": {"scale": "xscale", "signal": "tooltip.category", "band": 0.5},           "y": {"scale": "yscale", "signal": "tooltip.amount", "offset": -2},           "text": {"signal": "tooltip.amount"},           "fillOpacity": [             {"test": "datum === tooltip", "value": 0},             {"value": 1}           ]         }       }     }   ] })
-     var view2;
-      view2 = new vega.View(parsed, {
-        renderer:  'svg',  // renderer (canvas or svg)
-        container: '#view',   // parent DOM container
-        hover:     true       // enable hover processing
-      });
-      view2.runAsync();*/
-/*    function r() {
-    var view = new vega.View(vega.parse(
-    {   "$schema": "https://vega.github.io/schema/vega/v5.json",   "description": "A basic bar chart example, with value labels shown upon mouse hover.",   "width": 400,   "height": 200,   "padding": 5,    "data": [     {       "name": "table",       "values": [         {"category": "A", "amount": 28},         {"category": "B", "amount": 55},         {"category": "C", "amount": 43},         {"category": "D", "amount": 91},         {"category": "E", "amount": 81},         {"category": "F", "amount": 53},         {"category": "G", "amount": 19},         {"category": "H", "amount": 87}       ]     }   ],    "signals": [     {       "name": "tooltip",       "value": {},       "on": [         {"events": "rect:mouseover", "update": "datum"},         {"events": "rect:mouseout",  "update": "{}"}       ]     }   ],    "scales": [     {       "name": "xscale",       "type": "band",       "domain": {"data": "table", "field": "category"},       "range": "width",       "padding": 0.05,       "round": true     },     {       "name": "yscale",       "domain": {"data": "table", "field": "amount"},       "nice": true,       "range": "height"     }   ],    "axes": [     { "orient": "bottom", "scale": "xscale" },     { "orient": "left", "scale": "yscale" }   ],    "marks": [     {       "type": "rect",       "from": {"data":"table"},       "encode": {         "enter": {           "x": {"scale": "xscale", "field": "category"},           "width": {"scale": "xscale", "band": 1},           "y": {"scale": "yscale", "field": "amount"},           "y2": {"scale": "yscale", "value": 0}         },         "update": {           "fill": {"value": "steelblue"}         },         "hover": {           "fill": {"value": "red"}         }       }     },     {       "type": "text",       "encode": {         "enter": {           "align": {"value": "center"},           "baseline": {"value": "bottom"},           "fill": {"value": "#333"}         },         "update": {           "x": {"scale": "xscale", "signal": "tooltip.category", "band": 0.5},           "y": {"scale": "yscale", "signal": "tooltip.amount", "offset": -2},           "text": {"signal": "tooltip.amount"},           "fillOpacity": [             {"test": "datum === tooltip", "value": 0},             {"value": 1}           ]         }       }     }   ] }
-    ), {
-        renderer:  'canvas',  // renderer (canvas or svg)
-        container: '#dummy',   // parent DOM container
-        hover:     true       // enable hover processing
-      });
-    view.runAsync();
-    }
-    };
-    new Promise(r);*/
-</script>
+<div id="plotly"></div>
 </body>
 </html>

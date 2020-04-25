@@ -1,16 +1,15 @@
 package com.github.aborg0.oeis.eval
 
+import com.github.aborg0.oeis.BoolExpression.{Equal, Less}
 import com.github.aborg0.oeis.Expression._
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
-import com.github.aborg0.oeis.eval.EvaluatorMemo.MemoizedContext
 import com.github.aborg0.oeis.{BoolExpression, Expression}
-import monocle._
-import monocle.macros._
 
 abstract class Evaluator {
   // Possibly non-thread-safe
-  final def evaluate(expressions: Seq[Expression],
-               ctx: EvalContext): (Seq[Option[Expression.T]], EvalContext) =
+  final def evaluate(
+      expressions: Seq[Expression],
+      ctx: EvalContext): (Seq[Option[Expression.T]], EvalContext) =
     expressions.foldLeft((Seq.empty[Option[Expression.T]], ctx)) {
       case ((res, currCtx), expr) =>
         expr match {
@@ -69,7 +68,9 @@ abstract class Evaluator {
         )
     }
 
-  protected def evaluateFunction(ctx: EvalContext, funcName: FuncName, arg: Expression): T = {
+  protected def evaluateFunction(ctx: EvalContext,
+                                 funcName: FuncName,
+                                 arg: Expression): T = {
     val FunDef(_, variable, expression: Expression) = ctx.funcCtx.getOrElse(
       funcName,
       throw new IllegalStateException(
@@ -80,7 +81,8 @@ abstract class Evaluator {
   }
 
   // Possibly non-thread-safe
-  final def evaluate(boolExpression: BoolExpression, ctx: EvalContext): Boolean =
+  final def evaluate(boolExpression: BoolExpression,
+                     ctx: EvalContext): Boolean =
     boolExpression match {
       case BoolExpression.True            => true
       case BoolExpression.False           => false
@@ -106,4 +108,33 @@ abstract class Evaluator {
 
 object Evaluator extends Evaluator {
   case class EvalContext(numCtx: Map[Var, T], funcCtx: Map[FuncName, FunDef])
+
+  object EvalContext {
+    def withSupportedFunctions: EvalContext =
+      EvalContext(
+        Map.empty,
+        Map(
+          //http://oeis.org/A000142
+          // TODO maybe implement with safeMult if it gets supported
+          FuncName("!") -> FunDef(
+            FuncName("!"),
+            Var("n"),
+            IfElse(Equal(Var("n"), Const(0)),
+                   Const(1),
+                   Product(Var("n"),
+                           FunRef(FuncName("!"), Minus(Var("n"), Const(1)))))),
+          FuncName("A000142") -> FunDef(FuncName("!"), Var("n"), FunRef(FuncName("!"), Var("n"))),
+          //http://oeis.org/A006882
+          FuncName("!!") -> FunDef(
+            FuncName("!!"),
+            Var("n"),
+            IfElse(Less(Var("n"), Const(1)),
+                   Const(1),
+                   Product(Var("n"),
+                           FunRef(FuncName("!!"), Minus(Var("n"), Const(2)))))),
+          FuncName("A006882") -> FunDef(FuncName("!!"), Var("n"), FunRef(FuncName("!!"), Var("n"))),
+        )
+      )
+  }
+
 }

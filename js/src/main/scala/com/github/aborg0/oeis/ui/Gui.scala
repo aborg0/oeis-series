@@ -10,6 +10,7 @@ import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
+import typings.plotlyJs.mod.{Data, Datum}
 
 import scala.util.Try
 //import typings.vegaTypings._
@@ -116,11 +117,23 @@ object Gui {
       child.text <-- parsedFormulaStream.collect {
         case Parsed.Success(fun@FunDef(name, variable, expression), index) =>
           chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map {
-            v => Try(evaluator.evaluate(FunRef(name, Const(v)), EvalContext(Map.empty, Map(name -> fun))).toDouble).toOption.orUndefined
+            v => Try(evaluator.evaluate(FunRef(name, Const(v)),
+              EvalContext(Map.empty, EvalContext.withSupportedFunctions.funcCtx ++ Map(name -> fun))).toDouble)
+              .toOption.orUndefined
           :scala.scalajs.js.UndefOr[typings.chartJs.mod.ChartPoint | Double | Null]}: _*)).orUndefined
           chart.data.datasets.get(0).label = name.name
           chart.update()
-        ""
+
+          typings.plotlyJs.coreMod.
+            newPlot("plotly", js.Array[Data](Data(
+              x = js.Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble):_*),
+              y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v => Try(evaluator.evaluate(FunRef(name, Const(v)),
+                EvalContext(Map.empty, EvalContext.withSupportedFunctions.funcCtx ++ Map(name -> fun))).toDouble.asInstanceOf[java.lang.Double])
+                .toOption.orNull.asInstanceOf[String | Double | js.Date | Null] }: _*),
+              mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
+              `type` = typings.plotlyJs.plotlyJsStrings.scatter)))
+
+          ""
         case _ =>
 //          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")
 //          ctx.fillStyle="#FFFFFF"
@@ -141,6 +154,7 @@ object Gui {
       .getElementById("dummyCanvas")
       .asInstanceOf[HTMLCanvasElement] //.getContext("2d")
     typings.chartJs.chartJsRequire
+    typings.plotlyJs.plotlyJsRequire
 //    val (_, canvasElem, _) = appendCanvasWithinDiv(document.body, "dfgs")
 ////    AnonChart(
 //    new ^(

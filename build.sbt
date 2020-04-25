@@ -2,8 +2,8 @@ name := "oeis-series"
 
 version := "0.1"
 
-scalaVersion := "2.13.1"
-ThisBuild / scalaVersion := "2.13.1"
+scalaVersion := "2.13.2"
+ThisBuild / scalaVersion := "2.13.2"
 
 lazy val root = project.in(file(".")).
   aggregate(oeisSeries.js, oeisSeries.jvm).
@@ -18,7 +18,7 @@ lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   settings(
     name := "oeis-series",
     version := "0.1-SNAPSHOT",
-    libraryDependencies += "com.lihaoyi" %%% "fastparse" % "2.2.4",
+    libraryDependencies += "com.lihaoyi" %%% "fastparse" % "2.3.0",
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-law" % monocleVersion % "test",
@@ -46,6 +46,10 @@ lazy val oeisSeriesJS = oeisSeries.js
     // Do not forget to run oeisSeriesJS/fastOptJS::webpack too after dependency changes!
     Compile / npmDependencies ++= Seq(
 //      "vega" -> "5.10.1",
+//      "vega-typings" -> "0.15.0",
+//      "plotly.js-dist" -> "1.53.0",
+      "plotly.js" -> "1.53.0",
+      "@types/plotly.js" -> "1.50.8",
       "chart.js" -> "2.9.3",
       "font-awesome" -> "4.7.0",
       "@types/chart.js" -> "2.9.18",

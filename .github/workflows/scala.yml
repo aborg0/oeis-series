@@ -41,7 +41,7 @@ jobs:
                       <p><a href="src/test/html/index-dev.html">DEV version</a> is available!</p>
                     </body>
                   </html>
-                  EOL
+        EOL
     - name: GitHub Pages
       if: success()
       uses: crazy-max/ghaction-github-pages@v1.3.0

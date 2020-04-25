@@ -14,7 +14,7 @@ object ExpressionParser {
   }
 
   def number[_: P]: P[Const]      = P(CharIn("0-9").rep(1).!.map(_.toInt).map(Const))
-  def identifier[_: P]: P[String] = P(CharsWhileIn("a-zA-Z")).!
+  def identifier[_: P]: P[String] = P(CharIn("a-zA-Z") ~~ CharsWhileIn("a-zA-Z0-9").?).!
   def funcApply[_: P](implicit ctx: ParseContext): P[Expression] =
     P(identifier).flatMap(
       id =>
@@ -32,8 +32,13 @@ object ExpressionParser {
     P("(" ~/ addSub ~ ")")
   def atom[_: P](implicit ctx: ParseContext): P[Expression] =
     P(ifElse | number | funcApply | parens | cases)
+  def factorial[_: P](implicit ctx: ParseContext): P[Expression] =
+    P(atom ~~ ("!!"|"!").?.!).map{
+      case (expression, name@("!!" | "!")) => FunRef(FuncName(name), expression)
+      case (expression, "") => expression
+    }
   def factor[_: P](implicit ctx: ParseContext): P[Expression] =
-    P(atom ~ ("^" ~ factor).?).map {
+    P(factorial ~ ("^" ~ factor).?).map {
       case (base, Some(exponent)) => Power(base, exponent)
       case (v, None)              => v
     }
