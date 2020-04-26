@@ -20,13 +20,13 @@ object ExpressionParser {
       id =>
         if (ctx.variable.contains(id)) Pass(Var(id))
         else if (ctx.function.contains(id))
-          P("(" ~ addSub ~ ")").map(expr => FunRef(FuncName(id), expr))
+          P("(" ~ addSub ~ ")").map(expr => FunRef(Left(FuncName(id)), expr))
         else
           P("(" ~/ identifier ~ ")" ~ ":=").flatMap(varName =>
             P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable + varName)) ~ &(End | StringIn(";", "}", "\n")))
             .map {
               case definition =>
-                FunDef(FuncName(id), Var(varName), definition)
+                FunDef(FuncName(id), Var(varName) :: Nil, definition)
           }))
   def parens[_: P](implicit ctx: ParseContext): P[Expression] =
     P("(" ~/ addSub ~ ")")
@@ -34,7 +34,7 @@ object ExpressionParser {
     P(ifElse | number | funcApply | parens | cases)
   def factorial[_: P](implicit ctx: ParseContext): P[Expression] =
     P(atom ~~ ("!!"|"!").?.!).map{
-      case (expression, name@("!!" | "!")) => FunRef(FuncName(name), expression)
+      case (expression, name@("!!" | "!")) => FunRef(Left(FuncName(name)), expression)
       case (expression, "") => expression
     }
   def factor[_: P](implicit ctx: ParseContext): P[Expression] =

@@ -1,7 +1,7 @@
 package com.github.aborg0.oeis.eval
 
 import com.github.aborg0.oeis.Expression
-import com.github.aborg0.oeis.Expression.{FuncName, T}
+import com.github.aborg0.oeis.Expression.{FunDef, FuncName, T}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.eval.EvaluatorMemo.MemoizedContext
 import monocle._
@@ -9,21 +9,28 @@ import monocle.macros._
 
 class EvaluatorMemo(private var ctx: MemoizedContext) extends Evaluator {
   import EvaluatorMemo._
-  override protected def evaluateFunction(ctx: EvalContext, funcName: FuncName, arg: Expression): T = {
-    val argRes = evaluate(arg, ctx)
-    this.ctx.memo.getOrElse((ctx, funcName, argRes), {
-      val res = super.evaluateFunction(ctx, funcName, arg)
-      this.ctx = memoLens.modify(_.updated((ctx, funcName, argRes), res))(this.ctx)
-      res
-    })
+  override protected def evaluateFunction(ctx: EvalContext, func: Either[FuncName, FunDef], args: Expression*): T = {
+    func match {
+      case Left(funcName) =>
+        val (argsRes, _) = args.foldRight((Seq.empty[T], ctx)) { case (arg, (prevVars, ctx)) =>
+          val value = evaluate(arg, ctx)
+          (value +: prevVars) -> ctx//.copy(numCtx = ctx.numCtx.updated(variable, value))
+        }
+        this.ctx.memo.getOrElse((ctx, funcName, argsRes), {
+          val res = super.evaluateFunction(ctx, func, args: _*)
+          this.ctx = memoLens.modify(_.updated((ctx, funcName, argsRes), res))(this.ctx)
+          res
+        })
+      case _ => super.evaluateFunction(ctx, func, args: _*)
+    }
   }
 }
 
 object EvaluatorMemo {
   private val memoLens = GenLens[MemoizedContext](_.memo)
 
-  private case class MemoizedContext(ctx: EvalContext, memo: Map[(EvalContext, FuncName, T), T])
+  private case class MemoizedContext(ctx: EvalContext, memo: Map[(EvalContext, FuncName, Seq[T]), T])
   def apply(evalCtx: EvalContext = EvalContext(Map.empty, Map.empty)): Evaluator = {
-    new EvaluatorMemo(new MemoizedContext(evalCtx, Map.empty))
+    new EvaluatorMemo(MemoizedContext(evalCtx, Map.empty))
   }
 }

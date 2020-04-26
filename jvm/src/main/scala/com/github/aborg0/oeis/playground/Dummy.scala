@@ -70,27 +70,43 @@ object Dummy {
     println(Evaluator.evaluate(Power(3, 0), ctx))
     println(
       Evaluator.evaluate(
-        FunRef(FuncName("plusDiv2"), 4),
+        FunRef(Left(FuncName("plusDiv2")), 4),
         ctx.copy(
           funcCtx = funcCtx.updated(
             FuncName("plusDiv2"),
-            FunDef(FuncName("plusDiv2"), Var("a"), Div(Sum(Var("a"), 2), 2))))))
+            FunDef(FuncName("plusDiv2"), Var("a") :: Nil, Div(Sum(Var("a"), 2), 2))))))
     val ctxWithFib = ctx.copy(
       funcCtx = funcCtx.updated(
         FuncName("fib"),
         FunDef(
           FuncName("fib"),
-          Var("a"), //https://oeis.org/A000045
+          Var("a") :: Nil, //https://oeis.org/A000045
           Cases(
-            Sum(FunRef(FuncName("fib"), Minus(Var("a"), 1)),
-                FunRef(FuncName("fib"), Minus(Var("a"), 2))),
+            Sum(FunRef(Left(FuncName("fib")), Minus(Var("a"), 1)),
+                FunRef(Left(FuncName("fib")), Minus(Var("a"), 2))),
             Case(Equal(Var("a"), 0), 0),
             Case(Equal(Var("a"), 1), 1),
             //          Case(Equal(Var("a"), 2), 1)
           )
         )
       ))
-    println(Evaluator.evaluate(FunRef(FuncName("fib"), 7), ctxWithFib))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("fib")), 7), ctxWithFib))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("choose_k_n-k_product")), 7), EvalContext.withSupportedFunctions.copy(numCtx = Map(Var("n") -> 7))))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("larger_power_of_2")),0), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("choose")), 7, 0), EvalContext.withSupportedFunctions))
+    println
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 1), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 2), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 3), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 4), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 5), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 6), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 7), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 8), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 9), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 10), EvalContext.withSupportedFunctions))
+    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 11), EvalContext.withSupportedFunctions))
+    println
 
     printValueAndAst(Seq("2+3*4"))//()
     printValueAndAst(Seq("2+3+1"))//()
@@ -101,7 +117,7 @@ object Dummy {
           "fib(10)"))//()
     printValueAndAst(Seq("fib(n+1)"),
                      ctx = ctxWithFib.copy(numCtx = Map(Var("n") -> 3)))//()
-    println(EvaluatorMemo(ctxWithFib).evaluate(FunRef(FuncName("fib"), 44), ctxWithFib))
+    println(EvaluatorMemo(ctxWithFib).evaluate(FunRef(Left(FuncName("fib")), 44), ctxWithFib))
     printValueAndAst(Seq("fib(7)"), ctx = ctxWithFib)//()
     printValueAndAst(Seq("2^fib(7)"), ctx = ctxWithFib)//()
     printValueAndAst(Seq("if true | false | 3>2 then 44 else 2 fi"))//()
@@ -110,5 +126,6 @@ object Dummy {
     printValueAndAst(
       Seq("sign(x) := {x > 0: 1; x = 0: 0; : -1}", "sign(2)", "sign(-2)"))//()
     printValueAndAst(Seq("1!+2!", "4!", "3!!", "(3!)!", "A000142(5)"), EvalContext.withSupportedFunctions)
+    printValueAndAst(Seq("triangular(n) := A000217(n)"), EvalContext.withSupportedFunctions)
   }
 }

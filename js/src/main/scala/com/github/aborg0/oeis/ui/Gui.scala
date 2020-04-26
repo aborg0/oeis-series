@@ -1,18 +1,21 @@
 package com.github.aborg0.oeis.ui
 
-import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef}
-import com.github.aborg0.oeis.eval.EvaluatorMemo
+import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef, FuncName}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
+import com.github.aborg0.oeis.eval.EvaluatorMemo
 import com.github.aborg0.oeis.parser.ExpressionParser
 import com.raquo.laminar.api.L._
 import fastparse.Parsed
+import fastparse.Parsed.Success
 import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
 import typings.plotlyJs.mod.{Data, Datum}
+import typings.std.HTMLSelectElement
 
 import scala.util.Try
+import scala.util.matching.Regex
 //import typings.vegaTypings._
 //import typings.vegaTypings.dataMod.Data
 import scala.scalajs.js
@@ -21,11 +24,13 @@ import scala.scalajs.js.|
 import scala.scalajs.js.|._
 
 object Gui {
-  def appendPar(targetNode: dom.Node, text: String): Unit = {
-    val parNode = document.createElement("p")
-    parNode.textContent = text
-    targetNode.appendChild(parNode)
-  }
+  private val NameRegex: Regex = "([a-zA-Z](?:[a-zA-Z0-9])*)".r
+
+//  def appendPar(targetNode: dom.Node, text: String): Unit = {
+//    val parNode = document.createElement("p")
+//    parNode.textContent = text
+//    targetNode.appendChild(parNode)
+//  }
 
   def appendCanvasWithinDiv(
       targetNode: dom.Node,
@@ -50,17 +55,20 @@ object Gui {
     def apply(caption: String): InputBox = {
 //      val valueVar = Var("")
       val bus = new EventBus[String]()
-      val inputNode: Input = input(typ := "text", value <-- bus.events, inContext(node => node.events(onInput).mapTo(node.ref.value) --> bus.writer))
+      val inputNode: Input = input(
+        typ := "text",
+        value <-- bus.events,
+        inContext(
+          node => node.events(onInput).mapTo(node.ref.value) --> bus.writer))
 //      inputNode.amend(onInput --> valueVar.writer)
-      val node      = div(caption, inputNode)
-      new InputBox(node, inputNode/*, valueVar*/, bus)
+      val node = div(caption, inputNode)
+      new InputBox(node, inputNode /*, valueVar*/, bus)
     }
   }
 
   def main(args: Array[String]): Unit = {
-    appendPar(document.getElementById("main"), "Hello World")
-    val labelsKeys= 1 to 44
-
+//    appendPar(document.getElementById("main"), "Hello World")
+    val labelsKeys = 1 to 44
 
     val formulaBox = InputBox("Formula")
 //    val formulaBus: EventBus[String] = new EventBus()
@@ -68,7 +76,25 @@ object Gui {
 
 //    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
 
-    val parsedFormulaStream = formulaBox.bus.events.map(ExpressionParser.parseFormula(_)())
+    import com.github.aborg0.oeis._
+    val parsedFormulaStream = formulaBox.bus.events
+      .collect {
+        case name
+            if EvalContext.withSupportedFunctions.funcCtx.contains(
+              FuncName(name))
+              && EvalContext.withSupportedFunctions
+                .funcCtx(FuncName(name))
+                .variables
+                .lengthIs == 1 =>
+          s"f(n) := $name(n)"
+        case formula => formula
+      }
+      .map(ExpressionParser.parseFormula(_)(
+        fromEvalContext(EvalContext.withSupportedFunctions)))
+      .map {
+        case success @ Success(_, _) => success
+        case other                   => other
+      }
     val evaluator = EvaluatorMemo()
     lazy val chart = new ^(
       document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement],
@@ -80,9 +106,7 @@ object Gui {
               backgroundColor = "rgb(0, 0, 0)",
               //                            borderColor = "yellow",
               `type` = ChartType.scatter,
-              data =
-                js.Array()
-              ,
+              data = js.Array(),
               fill = false,
             ),
             //            ChartDataSets(label = "X2",
@@ -98,51 +122,97 @@ object Gui {
       )
     )
 
-    val sampleFormula = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
+    val sampleFormula   = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
     val optimistFormula = "optimist(n):=n^3-33*n^2"
-    val useFib = button("Use fib", onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
+    val useFib = button(
+      "Use fib",
+      onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
 //    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
     val formulaDiv = div(
       formulaBox.node,
-      div(span(s"Example: "), span(cls := "formula", sampleFormula), span(useFib)),
-      div(span(cls:= "formula", optimistFormula), span(button("Use smile", onClick.mapToValue(optimistFormula) --> formulaBox.bus.writer))),
+      div(span("Example: "),
+          span(cls := "formula", sampleFormula),
+          span(useFib)),
+      div(span(cls := "formula", optimistFormula),
+          span(
+            button(
+              "Use smile",
+              onClick.mapToValue(optimistFormula) --> formulaBox.bus.writer))),
       div(
-        child.text <-- parsedFormulaStream.collect{
-            case Parsed.Success(value, index) => ""
-            case failure: Parsed.Failure      => failure.trace().longMsg
-          }
+        span("Supported functions"),
+        select(
+          option(value := "", "") +:
+            EvalContext.withSupportedFunctions.funcCtx.toSeq
+            .sortBy(_._1.name)
+            .collect {
+              case (FuncName(name), definition)
+                  if definition.variables.lengthIs == 1 && NameRegex.matches(
+                    name) =>
+                option(value := name, name)
+            },
+          onChange.map(_.target.asInstanceOf[HTMLSelectElement].value) --> {
+            formulaBox.bus.writer
+          },
         ),
+      ),
+      div(
+        child.text <-- parsedFormulaStream.collect {
+          case Parsed.Success(value, index) => ""
+          case failure: Parsed.Failure      => failure.trace().longMsg
+        }
+      ),
       canvas(idAttr := "innerCanvas"),
       child.text <-- parsedFormulaStream.collect {
-        case Parsed.Success(fun@FunDef(name, variable, expression), index) =>
-          chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map {
-            v => Try(evaluator.evaluate(FunRef(name, Const(v)),
-              EvalContext(Map.empty, EvalContext.withSupportedFunctions.funcCtx ++ Map(name -> fun))).toDouble)
-              .toOption.orUndefined
-          :scala.scalajs.js.UndefOr[typings.chartJs.mod.ChartPoint | Double | Null]}: _*)).orUndefined
+        case Parsed.Success(fun @ FunDef(name, variable, expression), index) =>
+          chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
+            Try(
+              evaluator
+                .evaluate(
+                  FunRef(Left(name), Const(v)),
+                  EvalContext(Map.empty,
+                              EvalContext.withSupportedFunctions.funcCtx ++ Map(
+                                name -> fun)))
+                .toDouble).toOption.orUndefined: scala.scalajs.js.UndefOr[
+              typings.chartJs.mod.ChartPoint | Double | Null]
+          }: _*)).orUndefined
           chart.data.datasets.get(0).label = name.name
           chart.update()
 
-          typings.plotlyJs.coreMod.
-            newPlot("plotly", js.Array[Data](Data(
-              x = js.Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble):_*),
-              y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v => Try(evaluator.evaluate(FunRef(name, Const(v)),
-                EvalContext(Map.empty, EvalContext.withSupportedFunctions.funcCtx ++ Map(name -> fun))).toDouble.asInstanceOf[java.lang.Double])
-                .toOption.orNull.asInstanceOf[String | Double | js.Date | Null] }: _*),
+          typings.plotlyJs.coreMod.newPlot(
+            "plotly",
+            js.Array[Data](Data(
+              x = js
+                .Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble): _*),
+              y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v =>
+                Try(
+                  evaluator
+                    .evaluate(
+                      FunRef(Left(name), Const(v)),
+                      EvalContext(
+                        Map.empty,
+                        EvalContext.withSupportedFunctions.funcCtx ++ Map(
+                          name -> fun)))
+                    .toDouble
+                    .asInstanceOf[java.lang.Double]).toOption.orNull
+                  .asInstanceOf[String | Double | js.Date | Null]
+              }: _*),
               mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
-              `type` = typings.plotlyJs.plotlyJsStrings.scatter)))
+              `type` = typings.plotlyJs.plotlyJsStrings.scatter
+            ))
+          )
 
           ""
         case _ =>
 //          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")
 //          ctx.fillStyle="#FFFFFF"
 //          ctx.fillRect(0, 0, 3000, 1000)
-          chart.data.datasets.get(0).data = Some(js.Array[scala.scalajs.js.UndefOr[typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
+          chart.data.datasets.get(0).data = Some(
+            js.Array[scala.scalajs.js.UndefOr[
+              typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
           chart.update()
           ""
       }
-
     )
 
     render(document.getElementById("main"), formulaDiv)
