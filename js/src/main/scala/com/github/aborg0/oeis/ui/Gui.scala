@@ -69,7 +69,10 @@ object Gui {
 
   def main(args: Array[String]): Unit = {
 //    appendPar(document.getElementById("main"), "Hello World")
-    val labelsKeys = 1 to 44
+    val start = Var(1)
+    val end = Var(44)
+
+    def labelsKeys = start.now() to end.now()
 
     val formulaBox = InputBox("Formula")
 //    val formulaBus: EventBus[String] = new EventBus()
@@ -138,6 +141,7 @@ object Gui {
 //    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
     def showFunDef(fun: FunDef, name: FuncName): Promise[PlotlyHTMLElement] = {
+      chart.data.labels = Option(js.Array[String | scala.scalajs.js.Array[scala.scalajs.js.Date | Double | typings.moment.mod.Moment | String] | Double | scala.scalajs.js.Date | typings.moment.mod.Moment](labelsKeys.map(_.toString): _*)).orUndefined
       chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
         Try(
           evaluator
@@ -233,6 +237,12 @@ object Gui {
             formulaBox.bus.writer
           },
         ),
+      ),
+      div(
+        span("Left: "),
+        input(typ := "number", inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer), value <-- start.signal.map(_.toString)),
+        span("Right: "),
+        input(typ := "number", inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer), value <-- end.signal.map(_.toString)),
       ),
       div(
         child.text <-- parsedFormulaStream.collect {
