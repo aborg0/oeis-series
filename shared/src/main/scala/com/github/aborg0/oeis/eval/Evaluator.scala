@@ -185,8 +185,12 @@ object Evaluator extends Evaluator {
             IfElse(
               Or(Less(Var("k"), Const(0)), Greater(Var("k"), Var("n"))),
               Const(0),
-              Div(FunRef(Left(FuncName("choose_k_n-k_product")), Sum(Var("k"), Const(1))),
+              IfElse(Less(Var("k"), Minus(Var("n"),Var("k"))),
+                Div(FunRef(Left(FuncName("choose_k_n-k_product")), Sum(Minus(Var("n"), Var("k")), Const(1))),
+                FunRef(Left(FuncName("!")), Minus(Var("k"), Const(0)))),
+                Div(FunRef(Left(FuncName("choose_k_n-k_product")), Sum(Var("k"), Const(1))),
                 FunRef(Left(FuncName("!")), Minus(Minus(Var("n"), Var("k")), Const(0))))
+              )
             )),
           //          FunDef(
           //            FuncName("choose_k"),
@@ -202,80 +206,6 @@ object Evaluator extends Evaluator {
                 FunRef(Left(FuncName("choose_k_n-k_product")),
                   Sum(Var("n-k"), Const(1)))))
           ),
-          FunDef(FuncName("larger_power_of_2"),
-            //@formatter:off
-            Var("n") :: Nil,
-                IfElse(Less(Var("n"), Const(1 <<  0    )), Const(1 <<  0),
-                IfElse(Less(Var("n"), Const(1 <<  0 + 1)), Const(1 <<  1),
-                IfElse(Less(Var("n"), Const(1 <<  1 + 1)), Const(1 <<  2),
-                IfElse(Less(Var("n"), Const(1 <<  2 + 1)), Const(1 <<  3),
-                IfElse(Less(Var("n"), Const(1 <<  3 + 1)), Const(1 <<  4),
-                IfElse(Less(Var("n"), Const(1 <<  4 + 1)), Const(1 <<  5),
-                IfElse(Less(Var("n"), Const(1 <<  5 + 1)), Const(1 <<  6),
-                IfElse(Less(Var("n"), Const(1 <<  6 + 1)), Const(1 <<  7),
-                IfElse(Less(Var("n"), Const(1 <<  7 + 1)), Const(1 <<  8),
-                IfElse(Less(Var("n"), Const(1 <<  8 + 1)), Const(1 <<  9),
-                IfElse(Less(Var("n"), Const(1 <<  9 + 1)), Const(1 << 10),
-                IfElse(Less(Var("n"), Const(1 << 10 + 1)), Const(1 << 11),
-                IfElse(Less(Var("n"), Const(1 << 11 + 1)), Const(1 << 12),
-                IfElse(Less(Var("n"), Const(1 << 12 + 1)), Const(1 << 13),
-                IfElse(Less(Var("n"), Const(1 << 13 + 1)), Const(1 << 14),
-                IfElse(Less(Var("n"), Const(1 << 14 + 1)), Const(1 << 15),
-                IfElse(Less(Var("n"), Const(1 << 15 + 1)), Const(1 << 16),
-                IfElse(Less(Var("n"), Const(1 << 16 + 1)), Const(1 << 17),
-                IfElse(Less(Var("n"), Const(1 << 17 + 1)), Const(1 << 18),
-                IfElse(Less(Var("n"), Const(1 << 18 + 1)), Const(1 << 19),
-                IfElse(Less(Var("n"), Const(1 << 19 + 1)), Const(1 << 20),
-                IfElse(Less(Var("n"), Const(1 << 20 + 1)), Const(1 << 21),
-                IfElse(Less(Var("n"), Const(1 << 21 + 1)), Const(1 << 22),
-                IfElse(Less(Var("n"), Const(1 << 22 + 1)), Const(1 << 23),
-                IfElse(Less(Var("n"), Const(1 << 23 + 1)), Const(1 << 24),
-                IfElse(Less(Var("n"), Const(1 << 24 + 1)), Const(1 << 25),
-                IfElse(Less(Var("n"), Const(1 << 25 + 1)), Const(1 << 26),
-                IfElse(Less(Var("n"), Const(1 << 26 + 1)), Const(1 << 27),
-                IfElse(Less(Var("n"), Const(1 << 27 + 1)), Const(1 << 28),
-                IfElse(Less(Var("n"), Const(1 << 28 + 1)), Const(1 << 29),
-                IfElse(Less(Var("n"), Const(1 << 29 + 1)), Const(1 << 30),
-                  Const(1 << 31)
-                )))))))))))))))))))))))))))))))
-          ), //@formatter:on
-          FunDef(FuncName("exponent_larger_power_of_2"),
-            //@formatter:off
-            Var("n") :: Nil,
-                IfElse(Less(Var("n"), Const(1 <<  0    )), Const( 0),
-                IfElse(Less(Var("n"), Const(1 <<  0 + 1)), Const( 1),
-                IfElse(Less(Var("n"), Const(1 <<  1 + 1)), Const( 2),
-                IfElse(Less(Var("n"), Const(1 <<  2 + 1)), Const( 3),
-                IfElse(Less(Var("n"), Const(1 <<  3 + 1)), Const( 4),
-                IfElse(Less(Var("n"), Const(1 <<  4 + 1)), Const( 5),
-                IfElse(Less(Var("n"), Const(1 <<  5 + 1)), Const( 6),
-                IfElse(Less(Var("n"), Const(1 <<  6 + 1)), Const( 7),
-                IfElse(Less(Var("n"), Const(1 <<  7 + 1)), Const( 8),
-                IfElse(Less(Var("n"), Const(1 <<  8 + 1)), Const( 9),
-                IfElse(Less(Var("n"), Const(1 <<  9 + 1)), Const(10),
-                IfElse(Less(Var("n"), Const(1 << 10 + 1)), Const(11),
-                IfElse(Less(Var("n"), Const(1 << 11 + 1)), Const(12),
-                IfElse(Less(Var("n"), Const(1 << 12 + 1)), Const(13),
-                IfElse(Less(Var("n"), Const(1 << 13 + 1)), Const(14),
-                IfElse(Less(Var("n"), Const(1 << 14 + 1)), Const(15),
-                IfElse(Less(Var("n"), Const(1 << 15 + 1)), Const(16),
-                IfElse(Less(Var("n"), Const(1 << 16 + 1)), Const(17),
-                IfElse(Less(Var("n"), Const(1 << 17 + 1)), Const(18),
-                IfElse(Less(Var("n"), Const(1 << 18 + 1)), Const(19),
-                IfElse(Less(Var("n"), Const(1 << 19 + 1)), Const(20),
-                IfElse(Less(Var("n"), Const(1 << 20 + 1)), Const(21),
-                IfElse(Less(Var("n"), Const(1 << 21 + 1)), Const(22),
-                IfElse(Less(Var("n"), Const(1 << 22 + 1)), Const(23),
-                IfElse(Less(Var("n"), Const(1 << 23 + 1)), Const(24),
-                IfElse(Less(Var("n"), Const(1 << 24 + 1)), Const(25),
-                IfElse(Less(Var("n"), Const(1 << 25 + 1)), Const(26),
-                IfElse(Less(Var("n"), Const(1 << 26 + 1)), Const(27),
-                IfElse(Less(Var("n"), Const(1 << 27 + 1)), Const(28),
-                IfElse(Less(Var("n"), Const(1 << 28 + 1)), Const(29),
-                IfElse(Less(Var("n"), Const(1 << 29 + 1)), Const(30),
-                  Const(31)
-                )))))))))))))))))))))))))))))))
-          ), //@formatter:on
           // http://oeis.org/A000217 triangular numbers (n*(n+1)/2)
           FunDef(FuncName("A000217"), Var("n") :: Nil, Div(Product(Var("n"), Sum(Var("n"), Const(1))), Const(2))),
           // http://oeis.org/A007318 Pascal triangle by rows
@@ -283,6 +213,8 @@ object Evaluator extends Evaluator {
             SmallerIndex1InAscending(Var("n"), Left(FuncName("A000217"))),
             Minus(Minus(Var("n"), Const(1)), SmallerValueInAscending(Var("n"), Left(FuncName("A000217"))))
           )),
+          // http://oeis.org/A000079 powers of 2
+          FunDef(FuncName("A000079"), Var("n") :: Nil, Power(Const(2), Minus(Var("n"), Const(0)))),
         ).view.map(funDef => funDef.name -> funDef).toMap
       )
   }

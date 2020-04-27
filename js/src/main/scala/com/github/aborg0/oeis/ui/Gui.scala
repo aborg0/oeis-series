@@ -11,9 +11,10 @@ import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
-import typings.plotlyJs.mod.{Data, Datum}
+import typings.plotlyJs.mod.{Data, Datum, PlotlyHTMLElement}
 import typings.std.HTMLSelectElement
 
+import scala.scalajs.js.{Date, Promise, UndefOr}
 import scala.util.Try
 import scala.util.matching.Regex
 //import typings.vegaTypings._
@@ -86,11 +87,18 @@ object Gui {
                 .funcCtx(FuncName(name))
                 .variables
                 .lengthIs == 1 =>
-          s"f(n) := $name(n)"
+          if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toLowerCase))) {
+            s"${name.toLowerCase}(n) := $name(n)"
+          } else if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toUpperCase()))) {
+            s"${name.toUpperCase}(n) := $name(n)"
+          } else {
+            s"f(n) := $name(n)"
+          }
+
         case formula => formula
       }
       .map(ExpressionParser.parseFormula(_)(
-        fromEvalContext(EvalContext.withSupportedFunctions)))
+        fromEvalContext(EvalContext.withSupportedFunctions).copy(variable = Set("n", "m", "k", "x", "y", "z"))))
       .map {
         case success @ Success(_, _) => success
         case other                   => other
@@ -129,6 +137,76 @@ object Gui {
       onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
 //    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
+    def showFunDef(fun: FunDef, name: FuncName): Promise[PlotlyHTMLElement] = {
+      chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
+        Try(
+          evaluator
+            .evaluate(
+              FunRef(Left(name), Const(v)),
+              EvalContext(Map.empty,
+                EvalContext.withSupportedFunctions.funcCtx ++ Map(
+                  name -> fun)))
+            .toDouble).toOption.orUndefined: UndefOr[
+          ChartPoint | Double | Null]
+      }: _*)).orUndefined
+      chart.data.datasets.get(0).label = name.name
+      chart.update()
+
+      typings.plotlyJs.coreMod.newPlot(
+        "plotly",
+        js.Array[Data](Data(
+          x = js
+            .Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble): _*),
+          y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v =>
+            Try(
+              evaluator
+                .evaluate(
+                  FunRef(Left(name), Const(v)),
+                  EvalContext(
+                    Map.empty,
+                    EvalContext.withSupportedFunctions.funcCtx ++ Map(
+                      name -> fun)))
+                .toDouble
+                .asInstanceOf[java.lang.Double]).toOption.orNull
+              .asInstanceOf[String | Double | Date | Null]
+          }: _*),
+          mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
+          `type` = typings.plotlyJs.plotlyJsStrings.scatter
+        ))
+      )
+    }
+    def collectVariablesOfBool(expression: BoolExpression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
+      expression match {
+        case BoolExpression.True => found
+        case BoolExpression.False => found
+        case BoolExpression.Not(expr) => collectVariablesOfBool(expr, found)
+        case BoolExpression.And(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariablesOfBool(expr, acc))
+        case BoolExpression.Or(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariablesOfBool(expr, acc))
+        case BoolExpression.Imply(antecedent, consequence) => collectVariablesOfBool(antecedent, collectVariablesOfBool(consequence, found))
+        case relation: Relation => collectVariables(relation.left, collectVariables(relation.right, found))
+      }
+
+    def collectVariables(expression: Expression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
+      expression match {
+        case variable@Expression.Var(v) => found + variable
+        case FunDef(name, variables, expression) => found ++ variables
+        case Const(t) => found
+        case Expression.Sum(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
+        case Expression.Product(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
+        case Expression.SafeProduct(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
+        case Expression.Power(base, exponent) => collectVariables(base, collectVariables(exponent, found))
+        case Expression.Minus(from, num) => collectVariables(from, collectVariables(num, found))
+        case Expression.Div(num, denom) => collectVariables(num, collectVariables(denom, found))
+        case Expression.Mod(num, denom) => collectVariables(num, collectVariables(denom, found))
+        case FunRef(name, args@_*) => args.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
+        case Expression.IfElse(pred, trueValue, falseValue) => collectVariablesOfBool(pred, collectVariables(trueValue, collectVariables(falseValue, found)))
+        case Expression.Cases(base, cases@_*) => cases.foldLeft(collectVariables(base, found))((acc, aCase) => acc ++ collectVariables(aCase.expression, acc) ++ collectVariablesOfBool(aCase.condition, acc))
+        case Expression.LargerOrEqualValueInAscending(v, reference) => collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
+        case Expression.LargerOrEqualIndex1InAscending(v, reference) => collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
+        case Expression.SmallerValueInAscending(v, reference) =>collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
+        case Expression.SmallerIndex1InAscending(v, reference) =>collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
+      }
+
     val formulaDiv = div(
       formulaBox.node,
       div(span("Example: "),
@@ -164,44 +242,12 @@ object Gui {
       ),
       canvas(idAttr := "innerCanvas"),
       child.text <-- parsedFormulaStream.collect {
-        case Parsed.Success(fun @ FunDef(name, variable, expression), index) =>
-          chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
-            Try(
-              evaluator
-                .evaluate(
-                  FunRef(Left(name), Const(v)),
-                  EvalContext(Map.empty,
-                              EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                                name -> fun)))
-                .toDouble).toOption.orUndefined: scala.scalajs.js.UndefOr[
-              typings.chartJs.mod.ChartPoint | Double | Null]
-          }: _*)).orUndefined
-          chart.data.datasets.get(0).label = name.name
-          chart.update()
 
-          typings.plotlyJs.coreMod.newPlot(
-            "plotly",
-            js.Array[Data](Data(
-              x = js
-                .Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble): _*),
-              y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v =>
-                Try(
-                  evaluator
-                    .evaluate(
-                      FunRef(Left(name), Const(v)),
-                      EvalContext(
-                        Map.empty,
-                        EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                          name -> fun)))
-                    .toDouble
-                    .asInstanceOf[java.lang.Double]).toOption.orNull
-                  .asInstanceOf[String | Double | js.Date | Null]
-              }: _*),
-              mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
-              `type` = typings.plotlyJs.plotlyJsStrings.scatter
-            ))
-          )
-
+        case Parsed.Success(fun @ FunDef(name, variables, expression), index) =>
+          showFunDef(fun, name)
+          ""
+        case Parsed.Success(expr, index) if collectVariables(expr).sizeIs <= 1 =>
+          showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"))
           ""
         case _ =>
 //          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")

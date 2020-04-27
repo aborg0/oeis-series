@@ -12,7 +12,7 @@ object Expression {
   final case class Div(num: Expression, denom: Expression) extends Expression
   final case class Mod(num: Expression, denom: Expression) extends Expression
   final case class FunDef(name: FuncName, variables: Seq[Var], expression: Expression) extends Expression
-  final case class FunRef(name: Either[FuncName, FunDef], arg: Expression*) extends Expression
+  final case class FunRef(name: Either[FuncName, FunDef], args: Expression*) extends Expression
 //  final case class Apply(variable: Var, value: T, expression: Expression) extends Expression
   final case class IfElse(pred: BoolExpression, trueValue: Expression, falseValue: Expression) extends Expression
   final case class Case(condition: BoolExpression, expression: Expression)
