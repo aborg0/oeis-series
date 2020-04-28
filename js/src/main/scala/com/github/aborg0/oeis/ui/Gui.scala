@@ -4,8 +4,9 @@ import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef, FuncName}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.eval.EvaluatorMemo
 import com.github.aborg0.oeis.parser.ExpressionParser
+import com.github.aborg0.oeis.parser.ExpressionParser.ParseContext
 import com.raquo.laminar.api.L._
-import fastparse.Parsed
+import fastparse.{Parsed, ParserInput}
 import fastparse.Parsed.Success
 import org.scalajs.dom
 import org.scalajs.dom.document
@@ -72,8 +73,6 @@ object Gui {
     val start = Var(1)
     val end = Var(44)
 
-    def labelsKeys = start.now() to end.now()
-
     val formulaBox = InputBox("Formula")
 //    val formulaBus: EventBus[String] = new EventBus()
 //    val formulaStream: EventStream[String] = formulaBus.events
@@ -125,7 +124,7 @@ object Gui {
             //                          data = js.Array(5d, 2d, 3d),
             //                          fill = false),
           ),
-          labels = js.Array(labelsKeys.map(_.toString): _*)
+          labels = js.Array((1 to 44).map(_.toString): _*)
         ),
         ChartOptions(),
         js.Array[PluginServiceRegistrationOptions](),
@@ -140,7 +139,9 @@ object Gui {
       onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
 //    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
-    def showFunDef(fun: FunDef, name: FuncName): Promise[PlotlyHTMLElement] = {
+    def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Promise[PlotlyHTMLElement] = {
+      def labelsKeys = startValue to endValue
+
       chart.data.labels = Option(js.Array[String | scala.scalajs.js.Array[scala.scalajs.js.Date | Double | typings.moment.mod.Moment | String] | Double | scala.scalajs.js.Date | typings.moment.mod.Moment](labelsKeys.map(_.toString): _*)).orUndefined
       chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
         Try(
@@ -224,6 +225,7 @@ object Gui {
       div(
         span("Supported functions"),
         select(
+          cls := "functions",
           option(value := "", "") +:
             EvalContext.withSupportedFunctions.funcCtx.toSeq
             .sortBy(_._1.name)
@@ -236,6 +238,9 @@ object Gui {
           onChange.map(_.target.asInstanceOf[HTMLSelectElement].value) --> {
             formulaBox.bus.writer
           },
+          inContext(node =>
+            value <-- formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
+          )
         ),
       ),
       div(
@@ -251,13 +256,13 @@ object Gui {
         }
       ),
       canvas(idAttr := "innerCanvas"),
-      child.text <-- parsedFormulaStream.collect {
+      child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty)).combineWith(start.signal).combineWith(end.signal).map {
 
-        case Parsed.Success(fun @ FunDef(name, variables, expression), index) =>
-          showFunDef(fun, name)
+        case ((Parsed.Success(fun @ FunDef(name, variables, expression), index), startValue), endValue) =>
+          showFunDef(fun, name, startValue, endValue)
           ""
-        case Parsed.Success(expr, index) if collectVariables(expr).sizeIs <= 1 =>
-          showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"))
+        case ((Parsed.Success(expr, index), startValue), endValue) if collectVariables(expr).sizeIs <= 1 =>
+          showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue)
           ""
         case _ =>
 //          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")
