@@ -1,7 +1,7 @@
 package com.github.aborg0.oeis.playground
 
-import com.github.aborg0.oeis.eval.{Evaluator, EvaluatorMemo}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
+import com.github.aborg0.oeis.eval.{Evaluator, EvaluatorMemo}
 import com.github.aborg0.oeis.parser.ExpressionParser
 import fastparse._
 
@@ -13,9 +13,8 @@ object Dummy {
   import com.github.aborg0.oeis._
   implicit def tToConst(t: T): Expression = Const(t)
 
-  private def valueAndAst(
-      inputs: Seq[String],
-      ctx: EvalContext = EvalContext(Map.empty, Map.empty)) /*(
+  private def valueAndAst(inputs: Seq[String],
+                          ctx: EvalContext = EvalContext.empty) /*(
       expr: P[_] => P[Expression] = ExpressionParser.expr(_, fromEvalContext(ctx))
   )*/: (Seq[(String, Int)], Seq[(Option[T], Expression)]) = {
     val (parsed, failed) = inputs
@@ -31,9 +30,11 @@ object Dummy {
                 case _ => currCtx
               })
             case failure: Parsed.Failure =>
-              (acc :+ Left[String, Expression](failure.trace(true).longMsg), currCtx)
+              (acc :+ Left[String, Expression](failure.trace(true).longMsg),
+               currCtx)
           })
-      }._1
+      }
+      ._1
       .zipWithIndex
       .partition(_._1.isRight)
     failed.collect { case (Left(str), idx) => str -> idx } -> {
@@ -44,19 +45,19 @@ object Dummy {
   }
 
   private def printValueAndAst(inputs: Seq[String],
-                               ctx: EvalContext =
-                                 EvalContext(Map.empty, Map.empty))/*(
+                               ctx: EvalContext = EvalContext.empty) /*(
       expr: P[_] => P[Expression] =
         ExpressionParser.expr(_, fromEvalContext(ctx)))*/: Unit = {
     println(inputs)
-    val (errors, results) = valueAndAst(inputs, ctx)//(expr)
+    val (errors, results) = valueAndAst(inputs, ctx) //(expr)
     println(s"$errors   ${results.map { case (v, ast) => (s"$v ", ast) }}")
   }
 
   def main(args: Array[String]): Unit = {
     val numCtx  = Map.empty[Var, T]
     val funcCtx = Map.empty[FuncName, FunDef]
-    val ctx     = EvalContext(numCtx, funcCtx)
+    val predCtx = Map.empty[PredName, PredicateDef]
+    val ctx     = EvalContext(numCtx, funcCtx, predCtx)
     println(Evaluator.evaluate(Sum(1, 3, 4), ctx))
     println(Evaluator.evaluate(Power(2, 9), ctx))
     println(Evaluator.evaluate(Power(2, 8), ctx))
@@ -72,9 +73,11 @@ object Dummy {
       Evaluator.evaluate(
         FunRef(Left(FuncName("plusDiv2")), 4),
         ctx.copy(
-          funcCtx = funcCtx.updated(
-            FuncName("plusDiv2"),
-            FunDef(FuncName("plusDiv2"), Var("a") :: Nil, Div(Sum(Var("a"), 2), 2))))))
+          funcCtx = funcCtx.updated(FuncName("plusDiv2"),
+                                    FunDef(FuncName("plusDiv2"),
+                                           Var("a") :: Nil,
+                                           Div(Sum(Var("a"), 2), 2))))
+      ))
     val ctxWithFib = ctx.copy(
       funcCtx = funcCtx.updated(
         FuncName("fib"),
@@ -91,41 +94,75 @@ object Dummy {
         )
       ))
     println(Evaluator.evaluate(FunRef(Left(FuncName("fib")), 7), ctxWithFib))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("choose_k_n-k_product")), 7), EvalContext.withSupportedFunctions.copy(numCtx = Map(Var("n") -> 7))))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("larger_power_of_2")),0), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("choose")), 7, 0), EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(
+        FunRef(Left(FuncName("choose_k_n-k_product")), 7),
+        EvalContext.withSupportedFunctions.copy(numCtx = Map(Var("n") -> 7))))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("larger_power_of_2")), 0),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("choose")), 7, 0),
+                         EvalContext.withSupportedFunctions))
     println
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 1), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 2), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 3), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 4), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 5), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 6), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 7), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 8), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 9), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 10), EvalContext.withSupportedFunctions))
-    println(Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 11), EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 1),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 2),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 3),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 4),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 5),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 6),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 7),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 8),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 9),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 10),
+                         EvalContext.withSupportedFunctions))
+    println(
+      Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 11),
+                         EvalContext.withSupportedFunctions))
     println
 
-    printValueAndAst(Seq("2+3*4"))//()
-    printValueAndAst(Seq("2+3+1"))//()
-    printValueAndAst(
-      Seq("fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}", "fib(11)"))//()
+    printValueAndAst(Seq("2+3*4")) //()
+    printValueAndAst(Seq("2+3+1")) //()
+    printValueAndAst(Seq(
+      "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}",
+      "fib(11)")) //()
     printValueAndAst(
       Seq("fib(n) := if n = 0 then 0 else if n = 1 then 1 else fib(n-1) + fib(n-2) fi fi",
-          "fib(10)"))//()
+          "fib(10)")) //()
     printValueAndAst(Seq("fib(n+1)"),
-                     ctx = ctxWithFib.copy(numCtx = Map(Var("n") -> 3)))//()
-    println(EvaluatorMemo(ctxWithFib).evaluate(FunRef(Left(FuncName("fib")), 44), ctxWithFib))
-    printValueAndAst(Seq("fib(7)"), ctx = ctxWithFib)//()
-    printValueAndAst(Seq("2^fib(7)"), ctx = ctxWithFib)//()
-    printValueAndAst(Seq("if true | false | 3>2 then 44 else 2 fi"))//()
+                     ctx = ctxWithFib.copy(numCtx = Map(Var("n") -> 3))) //()
+    println(
+      EvaluatorMemo(ctxWithFib).evaluate(FunRef(Left(FuncName("fib")), 44),
+                                         ctxWithFib))
+    printValueAndAst(Seq("fib(7)"), ctx = ctxWithFib)                //()
+    printValueAndAst(Seq("2^fib(7)"), ctx = ctxWithFib)              //()
+    printValueAndAst(Seq("if true | false | 3>2 then 44 else 2 fi")) //()
     printValueAndAst(
-      Seq("{2>3: 33; 5 = 3: 22; true: {2< 0: 1111;: 2}; true: 1; : 11}"))//()
+      Seq("{2>3: 33; 5 = 3: 22; true: {2< 0: 1111;: 2}; true: 1; : 11}")) //()
     printValueAndAst(
-      Seq("sign(x) := {x > 0: 1; x = 0: 0; : -1}", "sign(2)", "sign(-2)"))//()
-    printValueAndAst(Seq("1!+2!", "4!", "3!!", "(3!)!", "A000142(5)"), EvalContext.withSupportedFunctions)
-    printValueAndAst(Seq("triangular(n) := A000217(n)"), EvalContext.withSupportedFunctions)
+      Seq("sign(x) := {x > 0: 1; x = 0: 0; : -1}", "sign(2)", "sign(-2)")) //()
+    printValueAndAst(Seq("1!+2!", "4!", "3!!", "(3!)!", "A000142(5)"),
+                     EvalContext.withSupportedFunctions)
+    printValueAndAst(Seq("triangular(n) := A000217(n)"),
+                     EvalContext.withSupportedFunctions)
   }
 }

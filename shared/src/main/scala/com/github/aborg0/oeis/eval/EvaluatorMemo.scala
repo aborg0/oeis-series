@@ -29,8 +29,9 @@ class EvaluatorMemo(private var ctx: MemoizedContext) extends Evaluator {
 object EvaluatorMemo {
   private val memoLens = GenLens[MemoizedContext](_.memo)
 
+  // TODO memoize set enumerations too
   private case class MemoizedContext(ctx: EvalContext, memo: Map[(EvalContext, FuncName, Seq[T]), T])
-  def apply(evalCtx: EvalContext = EvalContext(Map.empty, Map.empty)): Evaluator = {
+  def apply(evalCtx: EvalContext = EvalContext.empty): Evaluator = {
     new EvaluatorMemo(MemoizedContext(evalCtx, Map.empty))
   }
 }

@@ -1,18 +1,19 @@
 package com.github.aborg0.oeis.ui
 
+import com.github.aborg0.oeis.BoolExpression.{PredName, PredicateDef}
 import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef, FuncName}
+import com.github.aborg0.oeis.Relation.PointRelation
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.eval.EvaluatorMemo
 import com.github.aborg0.oeis.parser.ExpressionParser
 import com.github.aborg0.oeis.parser.ExpressionParser.ParseContext
 import com.raquo.laminar.api.L._
-import fastparse.{Parsed, ParserInput}
+import fastparse.Parsed
 import fastparse.Parsed.Success
 import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
-import typings.plotlyJs.PartialConfig
 import typings.plotlyJs.mod.{Data, Datum, PlotlyHTMLElement}
 import typings.std.HTMLSelectElement
 
@@ -154,7 +155,7 @@ object Gui {
                 FunRef(Left(name), Const(v)),
                 EvalContext(Map.empty,
                   EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                    name -> fun)))
+                    name -> fun), Map.empty))
               .toDouble).toOption.orUndefined: UndefOr[
             ChartPoint | Double | Null]
         }: _*)).orUndefined
@@ -182,7 +183,7 @@ object Gui {
                       EvalContext(
                         Map.empty,
                         EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                          name -> fun)))
+                          name -> fun), Map.empty))
                     .toDouble
                     .asInstanceOf[java.lang.Double]).toOption.orNull
                   .asInstanceOf[String | Double | Date | Null]
@@ -208,6 +209,18 @@ object Gui {
           )
       }
     }
+    def collectVariablesOfSet(expression: SetExpression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
+      expression match {
+        case SetExpression.Intersect(sets@_*) => sets.foldLeft(found)((acc, set) => acc ++ collectVariablesOfSet(set, acc))
+        case SetExpression.Union(sets@_*) => sets.foldLeft(found)((acc, set) => acc ++ collectVariablesOfSet(set, acc))
+        case SetExpression.RestrictByPredicate(pred, set) => collectVariablesOfSet(set, found) ++ (pred match {
+          case Left(PredName(name)) => ???
+          case Right(PredicateDef(predName, vars, expressions@_*)) => ???
+        })
+        case SetExpression.CartesianProduct(sets@_*) => sets.foldLeft(found)((acc, set) => acc ++ collectVariablesOfSet(set, acc))
+          case SetExpression.Enumerate(values@_*) => values.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
+          case SetExpression.RangeInclusive(from, to) => collectVariables(from, found) ++ collectVariables(to, found)
+      }
     def collectVariablesOfBool(expression: BoolExpression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
       expression match {
         case BoolExpression.True => found
@@ -216,7 +229,13 @@ object Gui {
         case BoolExpression.And(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariablesOfBool(expr, acc))
         case BoolExpression.Or(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariablesOfBool(expr, acc))
         case BoolExpression.Imply(antecedent, consequence) => collectVariablesOfBool(antecedent, collectVariablesOfBool(consequence, found))
-        case relation: Relation => collectVariables(relation.left, collectVariables(relation.right, found))
+        case relation: PointRelation => collectVariables(relation.left, collectVariables(relation.right, found))
+        case BoolExpression.IsIn(vs, set) => collectVariablesOfSet(set, found) ++ vs.flatMap(collectVariables(_, found))
+        case BoolExpression.PredicateRef(predName, point@_*) => ???
+        case BoolExpression.PredicateDef(predName, vars, expressions@_*) => found ++ vars ++ ???
+        case BoolExpression.ForAll(set, predicate) =>
+          collectVariablesOfSet(set, found) ++ ???
+        case BoolExpression.ForAll(set, predicate) => ???
       }
 
     def collectVariables(expression: Expression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
@@ -238,6 +257,8 @@ object Gui {
         case Expression.LargerOrEqualIndex1InAscending(v, reference) => collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
         case Expression.SmallerValueInAscending(v, reference) =>collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
         case Expression.SmallerIndex1InAscending(v, reference) =>collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
+        case Expression.Cardinality(set) => collectVariablesOfSet(set, found)
+        case Expression.Project(point, dimension) => point.foldLeft(found)((acc, p) => acc ++ collectVariables(p, acc))
       }
 
     val formulaDiv = div(

@@ -24,6 +24,7 @@ lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-law" % monocleVersion % "test",
     libraryDependencies += "org.scalactic" %%% "scalactic" % "3.1.1",
     libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test",
+    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-14" % "3.1.1.1" % "test",
   ).
   jvmSettings(
     // Add JVM-specific settings here
@@ -53,6 +54,9 @@ lazy val oeisSeriesJS = oeisSeries.js
       "chart.js" -> "2.9.3",
       "font-awesome" -> "4.7.0",
       "@types/chart.js" -> "2.9.18",
+//      "@danmarshall/deckgl-typings" -> "4.0.0",
+//      "@deck.gl/core" -> "^8.1.0",
+//      "@deck.gl/layers" -> "^8.1.0",
     ),
     Compile / npmDevDependencies ++= Seq(
 //      "vega-typings" -> "0.15.0",
