@@ -22,11 +22,11 @@ object ExpressionParser {
         else if (ctx.function.contains(id))
           P("(" ~ addSub.rep(1, ",") ~ ")").map(expr => FunRef(Left(FuncName(id)), expr:_*))
         else
-          P("(" ~/ identifier ~ ")" ~ ":=").flatMap(varName =>
-            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable + varName)) ~ &(End | StringIn(";", "}", "\n")))
+          P("(" ~/ identifier.rep(1, ",", 2) ~ ")" ~ ":=").flatMap(varNames =>
+            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable ++ varNames)) ~ &(End | StringIn(";", "}", "\n")))
             .map {
               case definition =>
-                FunDef(FuncName(id), Var(varName) :: Nil, definition)
+                FunDef(FuncName(id), varNames.map(Var), definition)
           }))
   def parens[_: P](implicit ctx: ParseContext): P[Expression] =
     P("(" ~/ addSub ~ ")")

@@ -157,8 +157,7 @@ object Evaluator extends Evaluator {
       EvalContext(
         Map.empty,
         Set(
-          //http://oeis.org/A000142
-          // TODO maybe implement with safeMult if it gets supported
+          //http://oeis.org/A000142 factorial
           FunDef(FuncName("!"),
             Var("n") :: Nil,
             IfElse(Equal(Var("n"), Const(0)),
@@ -169,7 +168,7 @@ object Evaluator extends Evaluator {
           FunDef(FuncName("A000142"),
             Var("n") :: Nil,
             FunRef(Left(FuncName("!")), Var("n"))),
-          //http://oeis.org/A006882
+          //http://oeis.org/A006882 double factorial
           FunDef(FuncName("!!"),
             Var("n") :: Nil,
             IfElse(Less(Var("n"), Const(1)),
@@ -215,6 +214,12 @@ object Evaluator extends Evaluator {
           )),
           // http://oeis.org/A000079 powers of 2
           FunDef(FuncName("A000079"), Var("n") :: Nil, Power(Const(2), Minus(Var("n"), Const(0)))),
+          // http://oeis.org/A000045 Fibonacci
+          FunDef(FuncName("A000045"), List(Var("n")),IfElse(Equal(Var("n"),Const(0)),Const(0),
+            IfElse(Equal(Var("n"),Const(1)),Const(1),
+              Sum(
+                FunRef(Left(FuncName("A000045")), Minus(Var("n"),Const(1))),
+                FunRef(Left(FuncName("A000045")), Minus(Var("n"),Const(2))))))),
         ).view.map(funDef => funDef.name -> funDef).toMap
       )
   }

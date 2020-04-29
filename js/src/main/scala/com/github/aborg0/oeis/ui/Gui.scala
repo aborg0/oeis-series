@@ -12,6 +12,7 @@ import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
+import typings.plotlyJs.PartialConfig
 import typings.plotlyJs.mod.{Data, Datum, PlotlyHTMLElement}
 import typings.std.HTMLSelectElement
 
@@ -70,6 +71,9 @@ object Gui {
 
   def main(args: Array[String]): Unit = {
 //    appendPar(document.getElementById("main"), "Hello World")
+    val ChartJS = typings.chartJs.chartJsRequire
+    val Plotly = typings.plotlyJs.plotlyJsRequire
+
     val start = Var(1)
     val end = Var(44)
 
@@ -100,7 +104,7 @@ object Gui {
         case formula => formula
       }
       .map(ExpressionParser.parseFormula(_)(
-        fromEvalContext(EvalContext.withSupportedFunctions).copy(variable = Set("n", "m", "k", "x", "y", "z"))))
+        fromEvalContext(EvalContext.withSupportedFunctions).copy(variable = Set("n", "m", "k", "x", "y"))))
       .map {
         case success @ Success(_, _) => success
         case other                   => other
@@ -140,45 +144,69 @@ object Gui {
 //    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
 
     def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Promise[PlotlyHTMLElement] = {
-      def labelsKeys = startValue to endValue
+      def labelsKeys: Range.Inclusive = startValue to endValue
+      if (fun.variables.lengthIs <= 1) {
+        chart.data.labels = Option(js.Array[String | scala.scalajs.js.Array[scala.scalajs.js.Date | Double | typings.moment.mod.Moment | String] | Double | scala.scalajs.js.Date | typings.moment.mod.Moment](labelsKeys.map(_.toString): _*)).orUndefined
+        chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
+          Try(
+            evaluator
+              .evaluate(
+                FunRef(Left(name), Const(v)),
+                EvalContext(Map.empty,
+                  EvalContext.withSupportedFunctions.funcCtx ++ Map(
+                    name -> fun)))
+              .toDouble).toOption.orUndefined: UndefOr[
+            ChartPoint | Double | Null]
+        }: _*)).orUndefined
+        chart.data.datasets.get(0).label = name.name
+        chart.update()
+      } else {
+        chart.data.datasets.get(0).data = Some(
+          js.Array[scala.scalajs.js.UndefOr[
+            typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
+        chart.update()
+      }
 
-      chart.data.labels = Option(js.Array[String | scala.scalajs.js.Array[scala.scalajs.js.Date | Double | typings.moment.mod.Moment | String] | Double | scala.scalajs.js.Date | typings.moment.mod.Moment](labelsKeys.map(_.toString): _*)).orUndefined
-      chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
-        Try(
-          evaluator
-            .evaluate(
-              FunRef(Left(name), Const(v)),
-              EvalContext(Map.empty,
-                EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                  name -> fun)))
-            .toDouble).toOption.orUndefined: UndefOr[
-          ChartPoint | Double | Null]
-      }: _*)).orUndefined
-      chart.data.datasets.get(0).label = name.name
-      chart.update()
-
-      typings.plotlyJs.coreMod.newPlot(
-        "plotly",
-        js.Array[Data](Data(
-          x = js
-            .Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble): _*),
-          y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v =>
-            Try(
-              evaluator
-                .evaluate(
-                  FunRef(Left(name), Const(v)),
-                  EvalContext(
-                    Map.empty,
-                    EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                      name -> fun)))
-                .toDouble
-                .asInstanceOf[java.lang.Double]).toOption.orNull
-              .asInstanceOf[String | Double | Date | Null]
-          }: _*),
-          mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
-          `type` = typings.plotlyJs.plotlyJsStrings.scatter
-        ))
-      )
+      fun.variables.length match {
+        case 0 | 1 =>
+          typings.plotlyJs.coreMod.newPlot(
+            "plotly",
+            js.Array[Data](Data(
+              x = js
+                .Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble): _*),
+              y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v =>
+                Try(
+                  evaluator
+                    .evaluate(
+                      FunRef(Left(name), Const(v)),
+                      EvalContext(
+                        Map.empty,
+                        EvalContext.withSupportedFunctions.funcCtx ++ Map(
+                          name -> fun)))
+                    .toDouble
+                    .asInstanceOf[java.lang.Double]).toOption.orNull
+                  .asInstanceOf[String | Double | Date | Null]
+              }: _*),
+              mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
+              `type` = typings.plotlyJs.plotlyJsStrings.scatter
+            ))
+          )
+        case 2 =>
+          typings.plotlyJs.coreMod.newPlot("plotly",
+            js.Array[Data](Data(
+//              xy = ,
+              z = js.Array((startValue to endValue).map(x => js.Array((startValue to endValue).map(y =>
+                Try{
+                  evaluator.evaluate(FunRef(Left(name), Const(x), Const(y)),
+                    EvalContext.withSupportedFunctions.copy(funcCtx = EvalContext.withSupportedFunctions.funcCtx ++ Map(name -> fun))
+                  ).toDouble: java.lang.Double
+                }.toOption.orNull
+              ):_*)):_*).asInstanceOf[js.Array[js.Array[js.Array[typings.plotlyJs.mod.Datum] | typings.plotlyJs.mod.Datum] | typings.plotlyJs.mod.Datum] | typings.plotlyJs.mod.TypedArray],
+              `type` = typings.plotlyJs.plotlyJsStrings.surface
+            )),
+//            config = PartialConfig()
+          )
+      }
     }
     def collectVariablesOfBool(expression: BoolExpression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
       expression match {
@@ -245,9 +273,9 @@ object Gui {
       ),
       div(
         span("Left: "),
-        input(typ := "number", inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer), value <-- start.signal.map(_.toString)),
+        input(typ := "number", maxAttr <-- end.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer), value <-- start.signal.map(_.toString)),
         span("Right: "),
-        input(typ := "number", inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer), value <-- end.signal.map(_.toString)),
+        input(typ := "number", minAttr <-- start.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer), value <-- end.signal.map(_.toString)),
       ),
       div(
         child.text <-- parsedFormulaStream.collect {
@@ -284,8 +312,6 @@ object Gui {
     val ctx = document
       .getElementById("dummyCanvas")
       .asInstanceOf[HTMLCanvasElement] //.getContext("2d")
-    typings.chartJs.chartJsRequire
-    typings.plotlyJs.plotlyJsRequire
 //    val (_, canvasElem, _) = appendCanvasWithinDiv(document.body, "dfgs")
 ////    AnonChart(
 //    new ^(
