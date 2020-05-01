@@ -53,28 +53,28 @@ class EvaluatorTest extends AnyFunSpec with ScalaCheckDrivenPropertyChecks {
           }
         }
       }
-      describe("choose") {
-        def chooseEval(n: Int, k: Int): Int =
-          Evaluator.evaluate(FunRef(Left(FuncName("choose")),
-                                    Const(n),
-                                    Const(k)),
-                             ctx)
-
-        (0 to 44).foreach { n: Int =>
-          it(s"should be 1 for k=0 n=$n", Tags.Generated) {
-            assert(chooseEval(n, 0) === 1)
-          }
-          it(s"should be 1 for k=n, n=$n", Tags.Generated) {
-            assert(chooseEval(n, n) === 1)
-          }
-          it(s"should be n for k=1 n=$n", Tags.Generated) {
-            assert(chooseEval(n, 1) === n)
-          }
-          it(s"should be n for k=n-1 n=$n", Tags.Generated) {
-            assert(chooseEval(n, n - 1) === n)
-          }
-        }
-      }
+//      describe("choose") {
+//        def chooseEval(n: Int, k: Int): Int =
+//          Evaluator.evaluate(FunRef(Left(FuncName("choose")),
+//                                    Const(n),
+//                                    Const(k)),
+//                             ctx)
+//
+//        (0 to 44).foreach { n: Int =>
+//          it(s"should be 1 for k=0 n=$n", Tags.Generated) {
+//            assert(chooseEval(n, 0) === 1)
+//          }
+//          it(s"should be 1 for k=n, n=$n", Tags.Generated) {
+//            assert(chooseEval(n, n) === 1)
+//          }
+//          it(s"should be n for k=1 n=$n", Tags.Generated) {
+//            assert(chooseEval(n, 1) === n)
+//          }
+//          it(s"should be n for k=n-1 n=$n", Tags.Generated) {
+//            assert(chooseEval(n, n - 1) === n)
+//          }
+//        }
+//      }
     }
   }
 }
