@@ -3,7 +3,6 @@ package com.github.aborg0.oeis.eval
 import com.github.aborg0.oeis.Expression.{Const, FunRef, FuncName, Mod}
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.test.Tags
-import org.scalactic.anyvals.PosZInt
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 
@@ -61,23 +60,17 @@ class EvaluatorTest extends AnyFunSpec with ScalaCheckDrivenPropertyChecks {
                                     Const(k)),
                              ctx)
 
-        it("should be 1 for k=0", Tags.Generated) {
-          (0 to 44).foreach { n: Int =>
+        (0 to 44).foreach { n: Int =>
+          it(s"should be 1 for k=0 n=$n", Tags.Generated) {
             assert(chooseEval(n, 0) === 1)
           }
-        }
-        it("should be 1 for k=n", Tags.Generated) {
-          (0 to 44).foreach { n: Int =>
+          it(s"should be 1 for k=n, n=$n", Tags.Generated) {
             assert(chooseEval(n, n) === 1)
           }
-        }
-        it("should be n for k=1", Tags.Generated) {
-          (0 to 44).foreach { n: Int =>
+          it(s"should be n for k=1 n=$n", Tags.Generated) {
             assert(chooseEval(n, 1) === n)
           }
-        }
-        it("should be n for k=n-1", Tags.Generated) {
-          (0 to 44).foreach { n: Int =>
+          it(s"should be n for k=n-1 n=$n", Tags.Generated) {
             assert(chooseEval(n, n - 1) === n)
           }
         }
