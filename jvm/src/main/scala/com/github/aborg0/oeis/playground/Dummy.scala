@@ -138,6 +138,31 @@ object Dummy {
     println(
       Evaluator.evaluate(FunRef(Left(FuncName("A007318")), 11),
                          EvalContext.withSupportedFunctions))
+    for {n <- 1 until 10
+         m <- 0 until n
+         } {
+      if (m == 0) {
+        println
+        print(s"n: $n ")
+      }
+      print(s"m: ${Console.BLUE}$m${Console.RESET} ${Console.CYAN}${
+        Evaluator.evaluate(FunRef(Left(FuncName("betweenAdjacentSameDenominatorsCountedOnce")), n, m),
+          EvalContext.withSupportedFunctions)}${Console.RESET}\t")
+    }
+    println
+    println
+    for {n <- 1 until 10
+         m <- 0 until n
+         } {
+      if (m == 0) {
+        println
+        print(s"n: $n ")
+      }
+      print(s"m: ${Console.BLUE}$m${Console.RESET} ${Console.CYAN}${
+        Evaluator.evaluate(FunRef(Left(FuncName("betweenAdjacentSameDenominatorsCountedEach")), n, m),
+          EvalContext.withSupportedFunctions)}${Console.RESET}\t")
+    }
+    println
     println
 
     printValueAndAst(Seq("2+3*4")) //()

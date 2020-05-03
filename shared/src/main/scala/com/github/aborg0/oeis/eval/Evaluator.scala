@@ -2,6 +2,7 @@ package com.github.aborg0.oeis.eval
 
 import com.github.aborg0.oeis.BoolExpression._
 import com.github.aborg0.oeis.Expression._
+import com.github.aborg0.oeis.SetExpression.{RangeInclusive, RestrictByPredicate}
 import com.github.aborg0.oeis.{BoolExpression, Expression, SetExpression}
 
 abstract class Evaluator {
@@ -83,7 +84,8 @@ abstract class Evaluator {
             enumerate(intersect, ctx).size
           case union @ SetExpression.Union(_) => enumerate(union, ctx).size
           case restricted @ SetExpression.RestrictByPredicate(_, _) =>
-            enumerate(restricted, ctx).size
+            val values = enumerate(restricted, ctx)
+            values.size
           case SetExpression.CartesianProduct(sets @ _*) =>
             sets.foldLeft(1)((prod, set) =>
               if (prod == 0) 0 else prod * evaluate(Cardinality(set), ctx))
@@ -116,11 +118,13 @@ abstract class Evaluator {
         }
       case SetExpression.RestrictByPredicate(pred, set) =>
         val (variable, expr) = extractPredicate(pred, ctx)
-        enumerate(set, ctx).filter(point =>
+        val values = enumerate(set, ctx)
+        values.filter(point =>
           expr.zip(point).foldLeft(true) {
             case (acc, (expr, v)) =>
-              acc && evaluate(expr,
-                              ctx.copy(numCtx = ctx.numCtx + (variable -> v)))
+              val contained = evaluate(expr,
+                ctx.copy(numCtx = ctx.numCtx + (variable -> v)))
+              acc && contained
         })
       case SetExpression.CartesianProduct(sets @ _*) =>
         // No embedded products, those will throw
@@ -150,7 +154,7 @@ abstract class Evaluator {
       case SetExpression.RangeInclusive(from, to) =>
         val x = evaluate(from, ctx)
         val y = evaluate(to, ctx)
-        ((x max y) to (x min y)).map(IndexedSeq(_)).toSet
+        ((x min y) to (x max y)).map(IndexedSeq(_)).toSet
     }
 
   protected def extractPredicate(
@@ -206,15 +210,14 @@ abstract class Evaluator {
                                  func: Either[FuncName, FunDef],
                                  args: Expression*): T = {
     val FunDef(_, variables, expression: Expression) = extractFunc(func, ctx)
+    // Only works on the JVM, but can be useful there to find (catastrophic) performance regressions
     if (!Thread.interrupted()) {
-      evaluate(
-        expression,
-        variables.zip(args).foldRight(ctx) {
-          case ((variable, arg), newContext) =>
-            newContext.copy(
-              numCtx = newContext.numCtx.updated(variable, evaluate(arg, ctx)))
-        }
-      )
+      val context = variables.zip(args).foldRight(ctx) {
+        case ((variable, arg), newContext) =>
+          newContext.copy(
+            numCtx = newContext.numCtx.updated(variable, evaluate(arg, ctx)))
+      }
+      evaluate(expression, context)
     } else {
       throw new IllegalStateException("Interrupted execution")
     }
@@ -277,7 +280,8 @@ abstract class Evaluator {
         })
       case BoolExpression.Exists(set, predicate) =>
         val (variable, expr) = extractPredicate(predicate, ctx)
-        enumerate(set, ctx).exists(point =>
+        val values = enumerate(set, ctx)
+        values.exists(point =>
           expr.zip(point).foldLeft(true) {
             case (acc, (expr, v)) =>
               acc && evaluate(expr,
@@ -300,8 +304,8 @@ object Evaluator extends Evaluator {
                          predCtx: Map[PredName, PredicateDef])
 
   object EvalContext {
-    def empty: EvalContext = EvalContext(Map.empty, Map.empty, Map.empty)
-    def withSupportedFunctions: EvalContext =
+    val empty: EvalContext = EvalContext(Map.empty, Map.empty, Map.empty)
+    val withSupportedFunctions: EvalContext =
       EvalContext(
         Map.empty,
         Set(
@@ -408,7 +412,63 @@ object Evaluator extends Evaluator {
                             Var("m"),
                             Mod(Var("n"), Var("m"))))
             )
-          )
+          ),
+          FunDef(FuncName("larger_power_of_2"),
+            List(Var("n")),
+            SmallerValueInAscending(Var("n"),Left(FuncName("A000079")))
+          ),
+          FunDef(
+            FuncName("betweenAdjacentSameDenominatorsCountedEach"),
+            List(Var("n"), Var("m")),
+            IfElse(Equal(Var("n"), Const(0)),
+              Const(0),
+              Cardinality(RestrictByPredicate(Right[PredName, PredicateDef](PredicateDef(PredName("unique_name_242rqwefse"), List(Var("k")),
+                Vector(Exists(
+                  RangeInclusive(Div(Product(Var("k"), Var("m")), Var("n")), Div(Product(Var("k"), Sum(Var("m"), Const(1))), Var("n"))),
+                  Right(PredicateDef(PredName("unique_name_4345wtw34wetr"), List(Var("j")),
+                    Vector(And(Less(Product(Var("k"), Var("m")), Product(Var("j"), Var("n"))), Less(Product(Var("n"), Var("j")), Product(Var("k"), Sum(Var("m"), Const(1)))))))),
+                  )
+              ))), RangeInclusive(Const(1), Minus(Var("n"), Const(1)))))
+            )
+          ),
+          FunDef(
+            FuncName("betweenAdjacentSameDenominatorsCountedOnce"),
+            List(Var("n"), Var("m")),
+            IfElse(Equal(Var("n"), Const(0)),
+              Const(0),
+              Cardinality(RestrictByPredicate(Right[PredName, PredicateDef](PredicateDef(PredName("unique_name_42rdfdfqwefse"), List(Var("k")),
+                Vector(Exists(
+                  RangeInclusive(Div(Product(Var("k"), Var("m")), Var("n")), Div(Product(Var("k"), Sum(Var("m"), Const(1))), Var("n"))),
+                  Right(PredicateDef(PredName("unique_name_434wte4wetrer"), List(Var("j")),
+                    Vector(And(Equal(FunRef(Left(FuncName("gcd")), Var("k"), Var("j")), Const(1)), Less(Product(Var("k"), Var("m")), Product(Var("j"), Var("n"))), Less(Product(Var("n"), Var("j")), Product(Var("k"), Sum(Var("m"), Const(1)))))))),
+                  )
+              ))), RangeInclusive(Const(1), Minus(Var("n"), Const(1)))))
+            )
+          ),
+          // between adjacent same denominators counted each time they appear triangle by rows
+          FunDef(
+            FuncName("betweenAdjacentSameDenominatorsCountedEachTriangle"),
+            Var("n") :: Nil,
+            FunRef(
+              Left(FuncName("betweenAdjacentSameDenominatorsCountedEach")),
+              SmallerIndex1InAscending(Var("n"), Left(FuncName("A000217"))),
+              Minus(Minus(Var("n"), Const(1)),
+                SmallerValueInAscending(Var("n"),
+                  Left(FuncName("A000217"))))
+            )
+          ),
+          // between adjacent same denominators counted once triangle by rows
+          FunDef(
+            FuncName("betweenAdjacentSameDenominatorsCountedOnceTriangle"),
+            Var("n") :: Nil,
+            FunRef(
+              Left(FuncName("betweenAdjacentSameDenominatorsCountedOnce")),
+              SmallerIndex1InAscending(Var("n"), Left(FuncName("A000217"))),
+              Minus(Minus(Var("n"), Const(1)),
+                SmallerValueInAscending(Var("n"),
+                  Left(FuncName("A000217"))))
+            )
+          ),
         ).view.map(funDef => funDef.name -> funDef).toMap,
         Map.empty
       )
