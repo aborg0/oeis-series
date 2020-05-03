@@ -17,8 +17,8 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 11
-#    - name: Run tests
-#      run: sbt test
+    - name: Run tests
+      run: sbt test
     - name: fastOptJS
       run: sbt oeisSeriesJS/fastOptJS::webpack
     - name: Copy to public
