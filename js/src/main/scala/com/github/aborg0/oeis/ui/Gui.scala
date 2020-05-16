@@ -1,8 +1,7 @@
 package com.github.aborg0.oeis.ui
 
-import com.github.aborg0.oeis.BoolExpression.{PredName, PredicateDef}
 import com.github.aborg0.oeis.Expression.{Const, FunDef, FunRef, FuncName}
-import com.github.aborg0.oeis.Relation.PointRelation
+import com.github.aborg0.oeis.eval.AstHelper._
 import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.eval.EvaluatorMemo
 import com.github.aborg0.oeis.parser.ExpressionParser
@@ -14,14 +13,11 @@ import org.scalajs.dom
 import org.scalajs.dom.document
 import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
 import typings.chartJs.mod._
-import typings.plotlyJs.mod.{Data, Datum, PlotlyHTMLElement}
 import typings.std.HTMLSelectElement
 
 import scala.scalajs.js.{Date, Promise, UndefOr}
 import scala.util.Try
 import scala.util.matching.Regex
-//import typings.vegaTypings._
-//import typings.vegaTypings.dataMod.Data
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.|
@@ -29,12 +25,6 @@ import scala.scalajs.js.|._
 
 object Gui {
   private val NameRegex: Regex = "([a-zA-Z](?:[a-zA-Z0-9])*)".r
-
-//  def appendPar(targetNode: dom.Node, text: String): Unit = {
-//    val parNode = document.createElement("p")
-//    parNode.textContent = text
-//    targetNode.appendChild(parNode)
-//  }
 
   def appendCanvasWithinDiv(
       targetNode: dom.Node,
@@ -52,37 +42,28 @@ object Gui {
       val node: Div, // consumers should add this element into the tree
       val inputNode: Input, // consumers can subscribe to events coming from this element
       val bus: EventBus[String]
-//      val valueVar: Var[String]
   )
 
   object InputBox {
     def apply(caption: String): InputBox = {
-//      val valueVar = Var("")
       val bus = new EventBus[String]()
       val inputNode: Input = input(
         typ := "text",
         value <-- bus.events,
         inContext(
           node => node.events(onInput).mapTo(node.ref.value) --> bus.writer))
-//      inputNode.amend(onInput --> valueVar.writer)
       val node = div(caption, inputNode)
-      new InputBox(node, inputNode /*, valueVar*/, bus)
+      new InputBox(node, inputNode, bus)
     }
   }
 
   def main(args: Array[String]): Unit = {
-//    appendPar(document.getElementById("main"), "Hello World")
     val ChartJS = typings.chartJs.chartJsRequire
-    val Plotly = typings.plotlyJs.plotlyJsRequire
 
     val start = Var(1)
     val end = Var(44)
 
     val formulaBox = InputBox("Formula")
-//    val formulaBus: EventBus[String] = new EventBus()
-//    val formulaStream: EventStream[String] = formulaBus.events
-
-//    formulaBox.inputNode.events(onInput).mapTo(formulaBox.inputNode.ref.value).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//(owner = formulaBox.inputNode)
 
     import com.github.aborg0.oeis._
     val parsedFormulaStream = formulaBox.bus.events
@@ -124,10 +105,6 @@ object Gui {
               data = js.Array(),
               fill = false,
             ),
-            //            ChartDataSets(label = "X2",
-            //                          `type` = ChartType.line,
-            //                          data = js.Array(5d, 2d, 3d),
-            //                          fill = false),
           ),
           labels = js.Array((1 to 44).map(_.toString): _*)
         ),
@@ -139,12 +116,9 @@ object Gui {
 
     val sampleFormula   = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
     val optimistFormula = "optimist(n):=n^3-33*n^2"
-    val useFib = button(
-      "Use fib",
-      onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
-//    useFib.events(onClick).mapToValue(sampleFormula).addObserver(formulaBox.bus.writer)(owner = unsafeWindowOwner)//formulaBox.valueVar.writer
+    val useFib = button("Use fib", onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
 
-    def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Promise[PlotlyHTMLElement] = {
+    def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Unit = {
       def labelsKeys: Range.Inclusive = startValue to endValue
       if (fun.variables.lengthIs <= 1) {
         chart.data.labels = Option(js.Array[String | scala.scalajs.js.Array[scala.scalajs.js.Date | Double | typings.moment.mod.Moment | String] | Double | scala.scalajs.js.Date | typings.moment.mod.Moment](labelsKeys.map(_.toString): _*)).orUndefined
@@ -167,99 +141,7 @@ object Gui {
             typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
         chart.update()
       }
-
-      fun.variables.length match {
-        case 0 | 1 =>
-          typings.plotlyJs.coreMod.newPlot(
-            "plotly",
-            js.Array[Data](Data(
-              x = js
-                .Array[js.Array[Datum] | Datum](labelsKeys.map(_.toDouble): _*),
-              y = js.Array[js.Array[Datum] | Datum](labelsKeys.map { v =>
-                Try(
-                  evaluator
-                    .evaluate(
-                      FunRef(Left(name), Const(v)),
-                      EvalContext(
-                        Map.empty,
-                        EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                          name -> fun), Map.empty))
-                    .toDouble
-                    .asInstanceOf[java.lang.Double]).toOption.orNull
-                  .asInstanceOf[String | Double | Date | Null]
-              }: _*),
-              mode = typings.plotlyJs.plotlyJsStrings.linesPlussignmarkers,
-              `type` = typings.plotlyJs.plotlyJsStrings.scatter
-            ))
-          )
-        case 2 =>
-          typings.plotlyJs.coreMod.newPlot("plotly",
-            js.Array[Data](Data(
-//              xy = ,
-              z = js.Array((startValue to endValue).map(x => js.Array((startValue to endValue).map(y =>
-                Try{
-                  evaluator.evaluate(FunRef(Left(name), Const(x), Const(y)),
-                    EvalContext.withSupportedFunctions.copy(funcCtx = EvalContext.withSupportedFunctions.funcCtx ++ Map(name -> fun))
-                  ).toDouble: java.lang.Double
-                }.toOption.orNull
-              ):_*)):_*).asInstanceOf[js.Array[js.Array[js.Array[typings.plotlyJs.mod.Datum] | typings.plotlyJs.mod.Datum] | typings.plotlyJs.mod.Datum] | typings.plotlyJs.mod.TypedArray],
-              `type` = typings.plotlyJs.plotlyJsStrings.surface
-            )),
-//            config = PartialConfig()
-          )
-      }
     }
-    def collectVariablesOfSet(expression: SetExpression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
-      expression match {
-        case SetExpression.Intersect(sets@_*) => sets.foldLeft(found)((acc, set) => acc ++ collectVariablesOfSet(set, acc))
-        case SetExpression.Union(sets@_*) => sets.foldLeft(found)((acc, set) => acc ++ collectVariablesOfSet(set, acc))
-        case SetExpression.RestrictByPredicate(pred, set) => collectVariablesOfSet(set, found) ++ (pred match {
-          case Left(PredName(name)) => ???
-          case Right(PredicateDef(predName, vars, expressions@_*)) => ???
-        })
-        case SetExpression.CartesianProduct(sets@_*) => sets.foldLeft(found)((acc, set) => acc ++ collectVariablesOfSet(set, acc))
-          case SetExpression.Enumerate(values@_*) => values.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
-          case SetExpression.RangeInclusive(from, to) => collectVariables(from, found) ++ collectVariables(to, found)
-      }
-    def collectVariablesOfBool(expression: BoolExpression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
-      expression match {
-        case BoolExpression.True => found
-        case BoolExpression.False => found
-        case BoolExpression.Not(expr) => collectVariablesOfBool(expr, found)
-        case BoolExpression.And(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariablesOfBool(expr, acc))
-        case BoolExpression.Or(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariablesOfBool(expr, acc))
-        case BoolExpression.Imply(antecedent, consequence) => collectVariablesOfBool(antecedent, collectVariablesOfBool(consequence, found))
-        case relation: PointRelation => collectVariables(relation.left, collectVariables(relation.right, found))
-        case BoolExpression.IsIn(vs, set) => collectVariablesOfSet(set, found) ++ vs.flatMap(collectVariables(_, found))
-        case BoolExpression.PredicateRef(predName, point@_*) => ???
-        case BoolExpression.PredicateDef(predName, vars, expressions@_*) => found ++ vars ++ ???
-        case BoolExpression.ForAll(set, predicate) =>
-          collectVariablesOfSet(set, found) ++ ???
-        case BoolExpression.ForAll(set, predicate) => ???
-      }
-
-    def collectVariables(expression: Expression, found: Set[Expression.Var] = Set.empty): Set[Expression.Var] =
-      expression match {
-        case variable@Expression.Var(v) => found + variable
-        case FunDef(name, variables, expression) => found ++ variables
-        case Const(t) => found
-        case Expression.Sum(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
-        case Expression.Product(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
-        case Expression.SafeProduct(expressions@_*) => expressions.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
-        case Expression.Power(base, exponent) => collectVariables(base, collectVariables(exponent, found))
-        case Expression.Minus(from, num) => collectVariables(from, collectVariables(num, found))
-        case Expression.Div(num, denom) => collectVariables(num, collectVariables(denom, found))
-        case Expression.Mod(num, denom) => collectVariables(num, collectVariables(denom, found))
-        case FunRef(name, args@_*) => args.foldLeft(found)((acc, expr) => acc ++ collectVariables(expr, acc))
-        case Expression.IfElse(pred, trueValue, falseValue) => collectVariablesOfBool(pred, collectVariables(trueValue, collectVariables(falseValue, found)))
-        case Expression.Cases(base, cases@_*) => cases.foldLeft(collectVariables(base, found))((acc, aCase) => acc ++ collectVariables(aCase.expression, acc) ++ collectVariablesOfBool(aCase.condition, acc))
-        case Expression.LargerOrEqualValueInAscending(v, reference) => collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
-        case Expression.LargerOrEqualIndex1InAscending(v, reference) => collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
-        case Expression.SmallerValueInAscending(v, reference) =>collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
-        case Expression.SmallerIndex1InAscending(v, reference) =>collectVariables(v, found) ++ reference.fold(_ => Set.empty, _.variables)
-        case Expression.Cardinality(set) => collectVariablesOfSet(set, found)
-        case Expression.Project(point, dimension) => point.foldLeft(found)((acc, p) => acc ++ collectVariables(p, acc))
-      }
 
     val formulaDiv = div(
       formulaBox.node,
@@ -267,10 +149,7 @@ object Gui {
           span(cls := "formula", sampleFormula),
           span(useFib)),
       div(span(cls := "formula", optimistFormula),
-          span(
-            button(
-              "Use smile",
-              onClick.mapToValue(optimistFormula) --> formulaBox.bus.writer))),
+          span(button("Use smile", onClick.mapToValue(optimistFormula) --> formulaBox.bus.writer))),
       div(
         span("Supported functions"),
         select(
@@ -314,9 +193,6 @@ object Gui {
           showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue)
           ""
         case _ =>
-//          val ctx = document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement].getContext("2d")
-//          ctx.fillStyle="#FFFFFF"
-//          ctx.fillRect(0, 0, 3000, 1000)
           chart.data.datasets.get(0).data = Some(
             js.Array[scala.scalajs.js.UndefOr[
               typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
@@ -326,49 +202,5 @@ object Gui {
     )
 
     render(document.getElementById("main"), formulaDiv)
-
-    val content: js.Array[js.Any] = js.Array[js.Any](1, 2, 6, 4).map { v =>
-      js.Dynamic.literal(category = s"cat-$v", amount = v)
-    }
-    val ctx = document
-      .getElementById("dummyCanvas")
-      .asInstanceOf[HTMLCanvasElement] //.getContext("2d")
-//    val (_, canvasElem, _) = appendCanvasWithinDiv(document.body, "dfgs")
-////    AnonChart(
-//    new ^(
-//      canvasElem,
-//      ChartConfiguration(
-//        ChartData(
-//          js.Array[ChartDataSets](
-//            ChartDataSets(
-//              label = "X1",
-//              backgroundColor = "rgb(0, 0, 0)",
-////                            borderColor = "yellow",
-//              `type` = ChartType.scatter,
-//              data = js.Array(2d, 4.5, 6d),
-//              fill = false,
-//            ),
-////            ChartDataSets(label = "X2",
-////                          `type` = ChartType.line,
-////                          data = js.Array(5d, 2d, 3d),
-////                          fill = false),
-//          ),
-//          labels = js.Array(labelsKeys.map(_.toString):_*)
-//        ),
-//        ChartOptions(),
-//        js.Array[PluginServiceRegistrationOptions](),
-//        `type` = ChartType.line
-//      )
-//    )
-//    )
-//    val spec: specMod.Spec = js.Dynamic.literal(data = Some(js.Array[Data](Data.ValuesData("serie", content, false))).orUndefined).asInstanceOf[specMod.Spec]
-//    println(spec)
-//    println(typings.vegaTypings.runtimeMod.parse(spec))
-//    println(typings.vega.mod.parse(spec))
-
-//      new specMod.Spec {
-////      override var data = Some(js.Array[Data](Data.ValuesData("serie", content, false))).orUndefined
-//    }
-//    new typings.vegaTypings.runtimeMod.View(runtimeMod.parse(spec), js.Dynamic.literal(renderer = "svg", container = "#main", hover = false)).runAsync()
   }
 }
