@@ -39,6 +39,7 @@ lazy val oeisSeriesJS = oeisSeries.js
   .enablePlugins(ScalablyTypedConverterPlugin)
   .settings(
     useYarn := true,
+    scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) },
     // This is a bit of mess. In case you face problems resolving on IDEA import, probably a wrong state was cached.
     // In that case please add a new dependency and reimport
     // Do not forget to run oeisSeriesJS/fastOptJS::webpack too after dependency changes!

@@ -9,34 +9,24 @@ import com.github.aborg0.oeis.parser.ExpressionParser.ParseContext
 import com.raquo.laminar.api.L._
 import fastparse.Parsed
 import fastparse.Parsed.Success
-import org.scalajs.dom
 import org.scalajs.dom.document
-import org.scalajs.dom.raw.{HTMLCanvasElement, HTMLElement}
+import org.scalajs.dom.raw.HTMLCanvasElement
 import typings.chartJs.mod._
 import typings.std.HTMLSelectElement
 
-import scala.scalajs.js.{Date, Promise, UndefOr}
-import scala.util.Try
-import scala.util.matching.Regex
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.|
+import scala.scalajs.js.{UndefOr, |}
 import scala.scalajs.js.|._
+import scala.util.Try
+import scala.util.matching.Regex
 
 object Gui {
+  import CssConstants._
   private val NameRegex: Regex = "([a-zA-Z](?:[a-zA-Z0-9])*)".r
 
-  def appendCanvasWithinDiv(
-      targetNode: dom.Node,
-      id: String): (HTMLElement, HTMLCanvasElement, String) = {
-    val divNode = document.createElement("div").asInstanceOf[HTMLElement]
-    val canvas =
-      document.createElement("canvas").asInstanceOf[HTMLCanvasElement]
-    canvas.setAttribute("id", id)
-    targetNode.appendChild(divNode)
-    divNode.appendChild(canvas)
-    (divNode, canvas, id)
-  }
+  private val sampleFormula   = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
+  private val optimistFormula = "optimist(n):=n^3-33*n^2"
 
   class InputBox private ( // create instances of InputBox using InputBox.apply only
       val node: Div, // consumers should add this element into the tree
@@ -50,39 +40,36 @@ object Gui {
       val inputNode: Input = input(
         typ := "text",
         value <-- bus.events,
+        size := 111,
         inContext(
           node => node.events(onInput).mapTo(node.ref.value) --> bus.writer))
-      val node = div(caption, inputNode)
+      val node = div(span(cls:= s"$SpaceOnRight", caption), inputNode)
       new InputBox(node, inputNode, bus)
     }
   }
 
+  object UseFormula {
+    def apply(buttonText: String, formula: String, formulaBox: InputBox): Div = {
+      div(span(cls := s"formula $SpaceOnRight", formula),
+        button(buttonText, onClick.mapToValue(formula) --> formulaBox.bus.writer))
+    }
+  }
+
   def main(args: Array[String]): Unit = {
-    val ChartJS = typings.chartJs.chartJsRequire
+    typings.chartJs.chartJsRequire
 
     val start = Var(1)
     val end = Var(44)
 
-    val formulaBox = InputBox("Formula")
+    val formulaBox = InputBox("Formula:")
 
     import com.github.aborg0.oeis._
     val parsedFormulaStream = formulaBox.bus.events
       .collect {
         case name
-            if EvalContext.withSupportedFunctions.funcCtx.contains(
-              FuncName(name))
-              && EvalContext.withSupportedFunctions
-                .funcCtx(FuncName(name))
-                .variables
-                .lengthIs == 1 =>
-          if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toLowerCase))) {
-            s"${name.toLowerCase}(n) := $name(n)"
-          } else if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toUpperCase()))) {
-            s"${name.toUpperCase}(n) := $name(n)"
-          } else {
-            s"f(n) := $name(n)"
-          }
-
+            if EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name)) &&
+              EvalContext.withSupportedFunctions.funcCtx(FuncName(name)).variables.lengthIs == 1 =>
+          generateFunctionByName(name)
         case formula => formula
       }
       .map(ExpressionParser.parseFormula(_)(
@@ -100,7 +87,6 @@ object Gui {
             ChartDataSets(
               label = name.name,
               backgroundColor = "rgb(0, 0, 0)",
-              //                            borderColor = "yellow",
               `type` = ChartType.scatter,
               data = js.Array(),
               fill = false,
@@ -113,10 +99,6 @@ object Gui {
         `type` = ChartType.line
       )
     )
-
-    val sampleFormula   = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
-    val optimistFormula = "optimist(n):=n^3-33*n^2"
-    val useFib = button("Use fib", onClick.mapToValue(sampleFormula) --> formulaBox.bus.writer)
 
     def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Unit = {
       def labelsKeys: Range.Inclusive = startValue to endValue
@@ -145,36 +127,34 @@ object Gui {
 
     val formulaDiv = div(
       formulaBox.node,
-      div(span("Example: "),
-          span(cls := "formula", sampleFormula),
-          span(useFib)),
-      div(span(cls := "formula", optimistFormula),
-          span(button("Use smile", onClick.mapToValue(optimistFormula) --> formulaBox.bus.writer))),
+      div("Examples:",
+        UseFormula("Use fib", sampleFormula, formulaBox),
+        UseFormula("Use smile", optimistFormula, formulaBox),
+      ),
       div(
-        span("Supported functions"),
+        span(cls:= s"$SpaceOnRight", "Supported functions"),
         select(
           cls := "functions",
+          // No selection
           option(value := "", "") +:
+          // Supported functions with single argument and compatible naming
             EvalContext.withSupportedFunctions.funcCtx.toSeq
             .sortBy(_._1.name)
             .collect {
               case (FuncName(name), definition)
-                  if definition.variables.lengthIs == 1 && NameRegex.matches(
-                    name) =>
+                  if definition.variables.lengthIs == 1 && NameRegex.matches(name) =>
                 option(value := name, name)
             },
-          onChange.map(_.target.asInstanceOf[HTMLSelectElement].value) --> {
-            formulaBox.bus.writer
-          },
-          inContext(node =>
-            value <-- formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
+          onChange.map(_.target.asInstanceOf[HTMLSelectElement].value) --> formulaBox.bus.writer,
+          inContext(node => value <--
+            formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
           )
         ),
       ),
       div(
-        span("Left: "),
-        input(typ := "number", maxAttr <-- end.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer), value <-- start.signal.map(_.toString)),
-        span("Right: "),
+        span(cls:= s"$SpaceOnRight","Left: "),
+        input(cls := s"$SpaceOnRight", typ := "number", maxAttr <-- end.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer), value <-- start.signal.map(_.toString)),
+        span(cls:= s"$SpaceOnRight", "Right: "),
         input(typ := "number", minAttr <-- start.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer), value <-- end.signal.map(_.toString)),
       ),
       div(
@@ -202,5 +182,15 @@ object Gui {
     )
 
     render(document.getElementById("main"), formulaDiv)
+  }
+
+  private def generateFunctionByName(name: String): String = {
+    if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toLowerCase))) {
+      s"${name.toLowerCase}(n) := $name(n)"
+    } else if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toUpperCase()))) {
+      s"${name.toUpperCase}(n) := $name(n)"
+    } else {
+      s"f(n) := $name(n)"
+    }
   }
 }
