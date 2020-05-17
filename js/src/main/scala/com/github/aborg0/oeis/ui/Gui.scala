@@ -6,6 +6,7 @@ import com.github.aborg0.oeis.eval.Evaluator.EvalContext
 import com.github.aborg0.oeis.eval.EvaluatorMemo
 import com.github.aborg0.oeis.parser.ExpressionParser
 import com.github.aborg0.oeis.parser.ExpressionParser.ParseContext
+import com.github.aborg0.oeis.ui.ChartJsHelpers.LabelElem
 import com.raquo.laminar.api.L._
 import fastparse.Parsed
 import fastparse.Parsed.Success
@@ -31,18 +32,18 @@ object Gui {
   class InputBox private ( // create instances of InputBox using InputBox.apply only
       val node: Div, // consumers should add this element into the tree
       val inputNode: Input, // consumers can subscribe to events coming from this element
-      val bus: EventBus[String]
+      val bus: EventBus[String] // source (`events`) and target (`writer`) of inputNode's events
   )
 
   object InputBox {
-    def apply(caption: String): InputBox = {
+    def apply(caption: String, sizeOfTextBox: Int): InputBox = {
       val bus = new EventBus[String]()
       val inputNode: Input = input(
         typ := "text",
         value <-- bus.events,
-        size := 111,
-        inContext(
-          node => node.events(onInput).mapTo(node.ref.value) --> bus.writer))
+        size := sizeOfTextBox,
+        inContext(node => node.events(onInput).mapTo(node.ref.value) --> bus.writer)
+      )
       val node = div(span(cls:= s"$SpaceOnRight", caption), inputNode)
       new InputBox(node, inputNode, bus)
     }
@@ -58,26 +59,21 @@ object Gui {
   def main(args: Array[String]): Unit = {
     typings.chartJs.chartJsRequire
 
-    val start = Var(1)
-    val end = Var(44)
+    val start = Var(1) // model for the first label (inclusive)
+    val end = Var(44) // model for the last label (inclusive)
 
-    val formulaBox = InputBox("Formula:")
+    val formulaBox = InputBox("Formula:", sizeOfTextBox = 111)
 
     import com.github.aborg0.oeis._
+    import EvalContext.{withSupportedFunctions => defaultCtx}
     val parsedFormulaStream = formulaBox.bus.events
       .collect {
-        case name
-            if EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name)) &&
-              EvalContext.withSupportedFunctions.funcCtx(FuncName(name)).variables.lengthIs == 1 =>
+        case name if defaultCtx.funcCtx.get(FuncName(name)).exists(_.variables.lengthIs == 1) =>
           generateFunctionByName(name)
         case formula => formula
       }
       .map(ExpressionParser.parseFormula(_)(
-        fromEvalContext(EvalContext.withSupportedFunctions).copy(variable = Set("n", "m", "k", "x", "y"))))
-      .map {
-        case success @ Success(_, _) => success
-        case other                   => other
-      }
+        fromEvalContext(defaultCtx).copy(variable = Set("n", "m", "k", "x", "y"))))
     val evaluator = EvaluatorMemo()
     lazy val chart = new ^(
       document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement],
@@ -103,24 +99,18 @@ object Gui {
     def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Unit = {
       def labelsKeys: Range.Inclusive = startValue to endValue
       if (fun.variables.lengthIs <= 1) {
-        chart.data.labels = Option(js.Array[String | scala.scalajs.js.Array[scala.scalajs.js.Date | Double | typings.moment.mod.Moment | String] | Double | scala.scalajs.js.Date | typings.moment.mod.Moment](labelsKeys.map(_.toString): _*)).orUndefined
+        chart.data.labels = Option(js.Array[LabelElem](labelsKeys.map(_.toString): _*)).orUndefined
         chart.data.datasets.get(0).data = Some(js.Array(labelsKeys.map { v =>
           Try(
             evaluator
-              .evaluate(
-                FunRef(Left(name), Const(v)),
-                EvalContext(Map.empty,
-                  EvalContext.withSupportedFunctions.funcCtx ++ Map(
-                    name -> fun), Map.empty))
-              .toDouble).toOption.orUndefined: UndefOr[
-            ChartPoint | Double | Null]
+              .evaluate(FunRef(Left(name), Const(v)),
+                EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
+              .toDouble).toOption.orUndefined: UndefOr[ChartPoint | Double | Null]
         }: _*)).orUndefined
         chart.data.datasets.get(0).label = name.name
         chart.update()
       } else {
-        chart.data.datasets.get(0).data = Some(
-          js.Array[scala.scalajs.js.UndefOr[
-            typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
+        chart.data.datasets.get(0).data = Some(js.Array[js.UndefOr[ChartPoint | Double | Null]]()).orUndefined
         chart.update()
       }
     }
@@ -146,6 +136,7 @@ object Gui {
                 option(value := name, name)
             },
           onChange.map(_.target.asInstanceOf[HTMLSelectElement].value) --> formulaBox.bus.writer,
+          // Replace with empty selection on change from other sources on formulaBox
           inContext(node => value <--
             formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
           )
@@ -153,9 +144,14 @@ object Gui {
       ),
       div(
         span(cls:= s"$SpaceOnRight","Left: "),
-        input(cls := s"$SpaceOnRight", typ := "number", maxAttr <-- end.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer), value <-- start.signal.map(_.toString)),
+        input(cls := s"$SpaceOnRight", typ := "number", maxAttr <-- end.signal.map(_.toString),
+          inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> start.writer),
+          value <-- start.signal.map(_.toString)),
         span(cls:= s"$SpaceOnRight", "Right: "),
-        input(typ := "number", minAttr <-- start.signal.map(_.toString), inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer), value <-- end.signal.map(_.toString)),
+        input(typ := "number",
+          minAttr <-- start.signal.map(_.toString),
+          inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer),
+          value <-- end.signal.map(_.toString)),
       ),
       div(
         child.text <-- parsedFormulaStream.collect {
@@ -164,7 +160,8 @@ object Gui {
         }
       ),
       canvas(idAttr := "innerCanvas"),
-      child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty)).combineWith(start.signal).combineWith(end.signal).map {
+      child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
+        .combineWith(start.signal).combineWith(end.signal).map {
 
         case ((Parsed.Success(fun @ FunDef(name, variables, expression), index), startValue), endValue) =>
           showFunDef(fun, name, startValue, endValue)
@@ -173,9 +170,7 @@ object Gui {
           showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue)
           ""
         case _ =>
-          chart.data.datasets.get(0).data = Some(
-            js.Array[scala.scalajs.js.UndefOr[
-              typings.chartJs.mod.ChartPoint | Double | Null]]()).orUndefined
+          chart.data.datasets.get(0).data = Some(js.Array[UndefOr[ChartPoint | Double | Null]]()).orUndefined
           chart.update()
           ""
       }
