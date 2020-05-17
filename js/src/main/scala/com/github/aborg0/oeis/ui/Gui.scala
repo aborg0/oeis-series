@@ -83,6 +83,7 @@ object Gui {
           js.Array[ChartDataSets](
             ChartDataSets(
               label = name.name,
+              backgroundColor = "rgb(0, 0, 0)",
               `type` = ChartType.scatter,
               data = js.Array(),
               fill = false,
@@ -133,9 +134,9 @@ object Gui {
             },
         {
           val values = onChange.map(_.target.asInstanceOf[HTMLSelectElement].value)
-          Seq(values --> formulaBox.bus.writer, values.collect{
+          Seq(values --> formulaBox.bus.writer, values/*.collect{
             case v if v.startsWith("A") && v.lengthIs == 7 => s"https://oeis.org/$v"
-          } --> checkOnOeisHref.writer)
+          }*/ --> checkOnOeisHref.writer)
 
         },
         // Replace with empty selection on change from other sources on formulaBox
@@ -143,12 +144,19 @@ object Gui {
           formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
         )
       ),
-      checkOnOeis,
+      span(child <-- checkOnOeisHref.signal.map(hrefValue => if (hrefValue.isEmpty || hrefValue.lengthIs != 7) "" else
+        a(href := hrefValue, target := "_blank", "Check on OEIS"))),
     )
 
 
     val content: ReactiveHtmlElement[html.Div] = div(
       formulaBox.node,
+      div(
+        child.text <-- parsedFormulaStream.collect {
+          case Parsed.Success(value, index) => ""
+          case failure: Parsed.Failure      => failure.trace().longMsg
+        }
+      ),
       div("Examples:",
         UseFormula("Use fib", sampleFormula, formulaBox),
         UseFormula("Use smile", optimistFormula, formulaBox),
@@ -164,12 +172,6 @@ object Gui {
           minAttr <-- start.signal.map(_.toString),
           inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer),
           value <-- end.signal.map(_.toString)),
-      ),
-      div(
-        child.text <-- parsedFormulaStream.collect {
-          case Parsed.Success(value, index) => ""
-          case failure: Parsed.Failure      => failure.trace().longMsg
-        }
       ),
       canvas(idAttr := "innerCanvas"),
       child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
