@@ -10,7 +10,7 @@ import com.github.aborg0.oeis.ui.ChartJsHelpers.LabelElem
 import com.raquo.laminar.api.L._
 import fastparse.Parsed
 import fastparse.Parsed.Success
-import org.scalajs.dom.document
+import org.scalajs.dom.{document, html}
 import org.scalajs.dom.raw.HTMLCanvasElement
 import typings.chartJs.mod._
 import typings.std.HTMLSelectElement
@@ -21,6 +21,9 @@ import scala.scalajs.js.{UndefOr, |}
 import scala.scalajs.js.|._
 import scala.util.Try
 import scala.util.matching.Regex
+import com.github.aborg0.oeis._
+import EvalContext.{withSupportedFunctions => defaultCtx}
+import com.raquo.laminar.nodes.ReactiveHtmlElement
 
 object Gui {
   import CssConstants._
@@ -64,9 +67,7 @@ object Gui {
 
     val formulaBox = InputBox("Formula:", sizeOfTextBox = 111)
 
-    import com.github.aborg0.oeis._
-    import EvalContext.{withSupportedFunctions => defaultCtx}
-    val parsedFormulaStream = formulaBox.bus.events
+    val parsedFormulaStream: EventStream[Parsed[Expression]] = formulaBox.bus.events
       .collect {
         case name if defaultCtx.funcCtx.get(FuncName(name)).exists(_.variables.lengthIs == 1) =>
           generateFunctionByName(name)
@@ -82,7 +83,6 @@ object Gui {
           js.Array[ChartDataSets](
             ChartDataSets(
               label = name.name,
-              backgroundColor = "rgb(0, 0, 0)",
               `type` = ChartType.scatter,
               data = js.Array(),
               fill = false,
@@ -115,33 +115,45 @@ object Gui {
       }
     }
 
-    val formulaDiv = div(
+    val checkOnOeisHref = Var("")
+    val checkOnOeis = a(href <-- checkOnOeisHref.signal,"Check on OEIS", target := "_blank")
+
+    val supportedFunctions = div(
+      span(cls:= s"$SpaceOnRight", "Supported functions"),
+      select(
+        cls := s"functions $SpaceOnRight",
+        // No selection
+        option(value := "", "") +:
+          // Supported functions with single argument and compatible naming
+          defaultCtx.funcCtx.toSeq
+            .sortBy(_._1.name)
+            .collect {
+              case (FuncName(name), definition) if definition.variables.lengthIs == 1 && NameRegex.matches(name) =>
+                option(value := name, name/*, title <-- CachedFetches.descriptionOf(name)*/)
+            },
+        {
+          val values = onChange.map(_.target.asInstanceOf[HTMLSelectElement].value)
+          Seq(values --> formulaBox.bus.writer, values.collect{
+            case v if v.startsWith("A") && v.lengthIs == 7 => s"https://oeis.org/$v"
+          } --> checkOnOeisHref.writer)
+
+        },
+        // Replace with empty selection on change from other sources on formulaBox
+        inContext(node => value <--
+          formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
+        )
+      ),
+      checkOnOeis,
+    )
+
+
+    val content: ReactiveHtmlElement[html.Div] = div(
       formulaBox.node,
       div("Examples:",
         UseFormula("Use fib", sampleFormula, formulaBox),
         UseFormula("Use smile", optimistFormula, formulaBox),
       ),
-      div(
-        span(cls:= s"$SpaceOnRight", "Supported functions"),
-        select(
-          cls := "functions",
-          // No selection
-          option(value := "", "") +:
-          // Supported functions with single argument and compatible naming
-            EvalContext.withSupportedFunctions.funcCtx.toSeq
-            .sortBy(_._1.name)
-            .collect {
-              case (FuncName(name), definition)
-                  if definition.variables.lengthIs == 1 && NameRegex.matches(name) =>
-                option(value := name, name)
-            },
-          onChange.map(_.target.asInstanceOf[HTMLSelectElement].value) --> formulaBox.bus.writer,
-          // Replace with empty selection on change from other sources on formulaBox
-          inContext(node => value <--
-            formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
-          )
-        ),
-      ),
+      supportedFunctions,
       div(
         span(cls:= s"$SpaceOnRight","Left: "),
         input(cls := s"$SpaceOnRight", typ := "number", maxAttr <-- end.signal.map(_.toString),
@@ -176,13 +188,13 @@ object Gui {
       }
     )
 
-    render(document.getElementById("main"), formulaDiv)
+    render(document.getElementById("main"), content)
   }
 
   private def generateFunctionByName(name: String): String = {
-    if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toLowerCase))) {
+    if (!defaultCtx.funcCtx.contains(FuncName(name.toLowerCase))) {
       s"${name.toLowerCase}(n) := $name(n)"
-    } else if (!EvalContext.withSupportedFunctions.funcCtx.contains(FuncName(name.toUpperCase()))) {
+    } else if (!defaultCtx.funcCtx.contains(FuncName(name.toUpperCase()))) {
       s"${name.toUpperCase}(n) := $name(n)"
     } else {
       s"f(n) := $name(n)"
