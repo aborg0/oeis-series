@@ -9,7 +9,6 @@ import com.github.aborg0.oeis.parser.ExpressionParser.ParseContext
 import com.github.aborg0.oeis.ui.ChartJsHelpers.LabelElem
 import com.raquo.laminar.api.L._
 import fastparse.Parsed
-import fastparse.Parsed.Success
 import org.scalajs.dom.{document, html}
 import org.scalajs.dom.raw.HTMLCanvasElement
 import typings.chartJs.mod._
@@ -117,7 +116,6 @@ object Gui {
     }
 
     val checkOnOeisHref = Var("")
-    val checkOnOeis = a(href <-- checkOnOeisHref.signal,"Check on OEIS", target := "_blank")
 
     val supportedFunctions = div(
       span(cls:= s"$SpaceOnRight", "Supported functions"),
