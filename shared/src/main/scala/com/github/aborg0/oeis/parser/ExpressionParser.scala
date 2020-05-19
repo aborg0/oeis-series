@@ -23,11 +23,9 @@ object ExpressionParser {
           P("(" ~ addSub.rep(1, ",") ~ ")").map(expr => FunRef(Left(FuncName(id)), expr:_*))
         else
           P("(" ~/ identifier.rep(1, ",", 2) ~ ")" ~ ":=").flatMap(varNames =>
-            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable ++ varNames)) ~ &(End | StringIn(";", "}", "\n")))
-            .map {
-              case definition =>
-                FunDef(FuncName(id), varNames.map(Var), definition)
-          }))
+            P(addSub(implicitly[P[_]], ctx.copy(function = ctx.function + id, variable = ctx.variable ++ varNames)) ~
+              &(End | StringIn(";", "}", "\n")))
+            .map(definition => FunDef(FuncName(id), varNames.map(Var), definition))))
   def parens[_: P](implicit ctx: ParseContext): P[Expression] =
     P("(" ~/ addSub ~ ")")
   def atom[_: P](implicit ctx: ParseContext): P[Expression] =
