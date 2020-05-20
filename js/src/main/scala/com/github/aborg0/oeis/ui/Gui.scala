@@ -132,9 +132,10 @@ object Gui {
             },
         {
           val values = onChange.map(_.target.asInstanceOf[HTMLSelectElement].value)
-          Seq(values --> formulaBox.bus.writer, values/*.collect{
+          Seq(values --> formulaBox.bus.writer, values.collect{
             case v if v.startsWith("A") && v.lengthIs == 7 => s"https://oeis.org/$v"
-          }*/ --> checkOnOeisHref.writer)
+            case _ => ""
+          } --> checkOnOeisHref.writer)
 
         },
         // Replace with empty selection on change from other sources on formulaBox
@@ -142,7 +143,7 @@ object Gui {
           formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
         )
       ),
-      span(child <-- checkOnOeisHref.signal.map(hrefValue => if (hrefValue.isEmpty || hrefValue.lengthIs != 7) "" else
+      span(child <-- checkOnOeisHref.signal.map(hrefValue => if (hrefValue.isEmpty) "" else
         a(href := hrefValue, target := "_blank", "Check on OEIS"))),
     )
 
