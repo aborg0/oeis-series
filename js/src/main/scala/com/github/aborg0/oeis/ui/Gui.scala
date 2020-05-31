@@ -23,6 +23,7 @@ import scala.util.matching.Regex
 import com.github.aborg0.oeis._
 import EvalContext.{withSupportedFunctions => defaultCtx}
 import com.raquo.laminar.nodes.ReactiveHtmlElement
+import org.scalajs.dom.html.Table
 
 object Gui {
   import CssConstants._
@@ -63,6 +64,8 @@ object Gui {
 
     val start = Var(1) // model for the first label (inclusive)
     val end = Var(44) // model for the last label (inclusive)
+    val top = Var(1) // model for the first row (inclusive)
+    val bottom = Var(44) // model for the last row (inclusive)
 
     val formulaBox = InputBox("Formula:", sizeOfTextBox = 111)
 
@@ -113,6 +116,20 @@ object Gui {
         chart.data.datasets.get(0).data = Some(js.Array[js.UndefOr[ChartPoint | Double | Null]]()).orUndefined
         chart.update()
       }
+    }
+    def showTable(fun: FunDef, name: FuncName, startValue: Int, endValue: Int, topValue: Int, bottomValue: Int): ReactiveHtmlElement[Table] = {
+      def labelsKeys: Range.Inclusive = startValue to endValue
+      def rowKeys: Range.Inclusive = topValue to bottomValue
+
+      table(tr(td(), labelsKeys.map(h => th(td(String.format(s"%1$$${bottomValue.toString.length}s", h.toString).replace(" ", "0"))))), rowKeys.map {
+        m => tr(th(td(m.toString)), labelsKeys.map {
+          n => Try(
+            evaluator
+              .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
+              .toDouble).toOption.fold(td())(v => td(v.toString))
+        })
+      })
     }
 
     val checkOnOeisHref = Var("")
@@ -172,11 +189,35 @@ object Gui {
           inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> end.writer),
           value <-- end.signal.map(_.toString)),
       ),
+      div(
+        span(cls:= s"$SpaceOnRight","Top: "),
+        input(cls := s"$SpaceOnRight", typ := "number", maxAttr <-- bottom.signal.map(_.toString),
+          inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> top.writer),
+          value <-- top.signal.map(_.toString)),
+        span(cls:= s"$SpaceOnRight", "Bottom: "),
+        input(typ := "number",
+          minAttr <-- top.signal.map(_.toString),
+          inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> bottom.writer),
+          value <-- bottom.signal.map(_.toString)),
+      ),
+      div(
+      child <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
+        .combineWith(start.signal).combineWith(end.signal).combineWith(top.signal).combineWith(bottom.signal).map {
+
+        case ((((Parsed.Success(fun@FunDef(name, variables, expression), index), startValue), endValue), topValue), bottomValue)
+          if variables.lengthIs == 2 =>
+          showTable(fun, name, startValue, endValue, topValue, bottomValue)
+        case ((((Parsed.Success(expr, index), startValue), endValue), topValue), bottomValue)
+          if collectVariables(expr).sizeIs == 2 =>
+          showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue)
+      }
+      ),
       canvas(idAttr := "innerCanvas"),
       child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
         .combineWith(start.signal).combineWith(end.signal).map {
 
-        case ((Parsed.Success(fun @ FunDef(name, variables, expression), index), startValue), endValue) =>
+        case ((Parsed.Success(fun @ FunDef(name, variables, expression), index), startValue), endValue)
+          if variables.lengthIs <= 1 =>
           showFunDef(fun, name, startValue, endValue)
           ""
         case ((Parsed.Success(expr, index), startValue), endValue) if collectVariables(expr).sizeIs <= 1 =>
