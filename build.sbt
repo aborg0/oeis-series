@@ -2,8 +2,8 @@ name := "oeis-series"
 
 version := "0.1"
 
-scalaVersion := "2.13.2"
-ThisBuild / scalaVersion := "2.13.2"
+scalaVersion := "2.13.3"
+ThisBuild / scalaVersion := "2.13.3"
 
 lazy val root = project.in(file(".")).
   aggregate(oeisSeries.js, oeisSeries.jvm).
@@ -12,7 +12,7 @@ lazy val root = project.in(file(".")).
     publishLocal := {},
   )
 
-val monocleVersion = "2.0.4"
+val monocleVersion = "2.0.5"
 
 lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   settings(
@@ -22,9 +22,9 @@ lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-law" % monocleVersion % "test",
-    libraryDependencies += "org.scalactic" %%% "scalactic" % "3.1.1",
-    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.1.1" % "test",
-    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-14" % "3.1.1.1" % "test",
+    libraryDependencies += "org.scalactic" %%% "scalactic" % "3.2.0",
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.0" % "test",
+    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-14" % "3.2.0.0" % "test",
   ).
   jvmSettings(
     // Add JVM-specific settings here
