@@ -80,24 +80,23 @@ object Gui {
     val evaluator = EvaluatorMemo()
     lazy val chart = new ^(
       document.getElementById("innerCanvas").asInstanceOf[HTMLCanvasElement],
-      ChartConfiguration(
-        ChartData(
+      ChartConfiguration().setData(
+        ChartData().setDatasets(
           js.Array[ChartDataSets](
-            ChartDataSets(
-              label = name.name,
-              backgroundColor = "rgb(0, 0, 0)",
-              `type` = ChartType.scatter,
-              data = js.Array(),
-              fill = false,
+            ChartDataSets()
+              .setLabel(name.name)
+              .setBackgroundColor("rgb(0, 0, 0)")
+                .setType(ChartType.scatter)
+              .setData(js.Array())
+                .setFill(false)
             ),
-          ),
-          labels = js.Array((1 to 44).map(_.toString): _*)
-        ),
-        ChartOptions(),
-        js.Array[PluginServiceRegistrationOptions](),
-        `type` = ChartType.line
+          ).setLabels(
+          js.Array((1 to 44).map(_.toString): _*)
+        )
+        ).setOptions(        ChartOptions())
+        .setPluginsVarargs()
+        .setType(ChartType.line)
       )
-    )
 
     def showFunDef(fun: FunDef, name: FuncName, startValue: Int, endValue: Int): Unit = {
       def labelsKeys: Range.Inclusive = startValue to endValue
