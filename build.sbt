@@ -45,11 +45,11 @@ lazy val oeisSeriesJS = oeisSeries.js
     // Do not forget to run oeisSeriesJS/fastOptJS::webpack too after dependency changes!
     Compile / npmDependencies ++= Seq(
       "chart.js" -> "2.9.3",
-      "@types/chart.js" -> "2.9.18",
+      "@types/chart.js" -> "2.9.23",
     ),
     Compile / npmDevDependencies ++= Seq(
     ),
     version in webpack := "4.42.1",
-    libraryDependencies += "com.raquo" %%% "laminar" % "0.9.0",
+    libraryDependencies += "com.raquo" %%% "laminar" % "0.9.2",
     libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.0.0",
   )

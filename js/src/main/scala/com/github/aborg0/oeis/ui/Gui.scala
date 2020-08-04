@@ -107,12 +107,12 @@ object Gui {
             evaluator
               .evaluate(FunRef(Left(name), Const(v)),
                 EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
-              .toDouble).toOption.orUndefined: UndefOr[ChartPoint | Double | Null]
+              .toDouble).toOption.orUndefined: UndefOr[js.Array[Double] | ChartPoint | Double | Null]
         }: _*)).orUndefined
         chart.data.datasets.get(0).label = name.name
         chart.update()
       } else {
-        chart.data.datasets.get(0).data = Some(js.Array[js.UndefOr[ChartPoint | Double | Null]]()).orUndefined
+        chart.data.datasets.get(0).data = Some(js.Array[js.UndefOr[js.Array[Double] | ChartPoint | Double | Null]]()).orUndefined
         chart.update()
       }
     }
@@ -223,7 +223,7 @@ object Gui {
           showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue)
           ""
         case _ =>
-          chart.data.datasets.get(0).data = Some(js.Array[UndefOr[ChartPoint | Double | Null]]()).orUndefined
+          chart.data.datasets.get(0).data = Some(js.Array[UndefOr[js.Array[Double] | ChartPoint | Double | Null]]()).orUndefined
           chart.update()
           ""
       }
