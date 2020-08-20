@@ -12,7 +12,7 @@ lazy val root = project.in(file(".")).
     publishLocal := {},
   )
 
-val monocleVersion = "2.0.5"
+val monocleVersion = "2.1.0"
 
 lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   settings(
@@ -22,9 +22,9 @@ lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
     libraryDependencies += "com.github.julien-truffaut" %%% "monocle-law" % monocleVersion % "test",
-    libraryDependencies += "org.scalactic" %%% "scalactic" % "3.2.0",
-    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.0" % "test",
-    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-14" % "3.2.0.0" % "test",
+    libraryDependencies += "org.scalactic" %%% "scalactic" % "3.2.1",
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.1" % "test",
+    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-14" % "3.2.1.0" % "test",
   ).
   jvmSettings(
     // Add JVM-specific settings here
@@ -45,7 +45,7 @@ lazy val oeisSeriesJS = oeisSeries.js
     // Do not forget to run oeisSeriesJS/fastOptJS::webpack too after dependency changes!
     Compile / npmDependencies ++= Seq(
       "chart.js" -> "2.9.3",
-      "@types/chart.js" -> "2.9.23",
+      "@types/chart.js" -> "2.9.24",
     ),
     Compile / npmDevDependencies ++= Seq(
     ),
