@@ -25,12 +25,28 @@ import EvalContext.{withSupportedFunctions => defaultCtx}
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom.html.Table
 
+sealed abstract class TableTypes extends Serializable with Product
+object TableTypes {
+  sealed abstract class Full(originRow: Int, originColumn: Int) extends TableTypes
+  final case object Full00 extends Full(0, 0)
+  final case object Full01 extends Full(0, 1)
+  final case object Full10 extends Full(1, 0)
+  final case object Full11 extends Full(1, 1)
+  sealed abstract class Triangle extends TableTypes
+  final case object LeftAlignedTriangle extends Triangle
+  final case object CenterAlignedTriangle extends Triangle
+  final case object RightSideCenterAlignedTriangle extends Triangle
+
+  val Supported: Seq[TableTypes] = Seq(Full11, LeftAlignedTriangle/*, CenterAlignedTriangle*/)
+}
+
 object Gui {
   import CssConstants._
   private val NameRegex: Regex = "([a-zA-Z](?:[a-zA-Z0-9])*)".r
 
   private val sampleFormula   = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
   private val optimistFormula = "optimist(n):=n^3-33*n^2"
+  private val countedOnce     = "betweenAdjacentSameDenominatorsCountedOnce(n, m)"
 
   class InputBox private ( // create instances of InputBox using InputBox.apply only
       val node: Div, // consumers should add this element into the tree
@@ -68,6 +84,7 @@ object Gui {
     val bottom = Var(44) // model for the last row (inclusive)
 
     val formulaBox = InputBox("Formula:", sizeOfTextBox = 111)
+    val tableFormat = Var(None: Option[TableTypes])
 
     val parsedFormulaStream: EventStream[Parsed[Expression]] = formulaBox.bus.events
       .collect {
@@ -116,22 +133,58 @@ object Gui {
         chart.update()
       }
     }
-    def showTable(fun: FunDef, name: FuncName, startValue: Int, endValue: Int, topValue: Int, bottomValue: Int): ReactiveHtmlElement[Table] = {
+    def showTable(fun: FunDef, name: FuncName, startValue: Int, endValue: Int, topValue: Int, bottomValue: Int, format: TableTypes): ReactiveHtmlElement[Table] = {
       def labelsKeys: Range.Inclusive = startValue to endValue
       def rowKeys: Range.Inclusive = topValue to bottomValue
 
-      table(tr(td(), labelsKeys.map(h => th(td(String.format(s"%1$$${bottomValue.toString.length}s", h.toString).replace(" ", "0"))))), rowKeys.map {
-        m => tr(th(td(m.toString)), labelsKeys.map {
-          n => Try(
-            evaluator
-              .evaluate(FunRef(Left(name), Const(n), Const(m)),
-                EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
-              .toDouble).toOption.fold(td())(v => td(v.toString))
-        })
-      })
+      format match {
+        case _: TableTypes.Full =>
+          table(tr(td(), labelsKeys.map(h => th(td(String.format(s"%1$$${bottomValue.toString.length}s", h.toString).replace(" ", "0"))))), rowKeys.map {
+            m => tr(th(td(m.toString)), labelsKeys.map {
+              n => Try(
+                evaluator
+                  .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                    EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
+                  .toDouble).toOption.fold(td())(v => td(v.toString))
+            })
+          })
+        case TableTypes.LeftAlignedTriangle =>
+          table(tr(td(), labelsKeys.map(h => th(td(String.format(s"%0${bottomValue.toString.length}d", h))))), rowKeys.map {
+            m => tr(th(td(m.toString)), labelsKeys.filter(_ <= m).map {
+              n => Try(
+                evaluator
+                  .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                    EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
+                  .toDouble).toOption.fold(td())(v => td(v.toString))
+            })
+          })
+        case TableTypes.CenterAlignedTriangle =>
+          table(tr(td(), labelsKeys.map(h => th(td(String.format(s"%1$$${bottomValue.toString.length}s", h.toString).replace(" ", "0"))))),
+            rowKeys.map {
+            m => tr(th(td(m.toString)), labelsKeys.filter(_ <= m).map {
+              n => Try(
+                evaluator
+                  .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                    EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
+                  .toDouble).toOption.fold(td())(v => td(v.toString))
+            })
+          })
+      }
     }
 
     val checkOnOeisHref = Var("")
+
+    val selectTableFormat = div(
+      span(cls:= s"$SpaceOnRight", "Table format"),
+      select(
+        cls := s"functions $SpaceOnRight",
+        TableTypes.Supported.map(tt => option(value := tt.toString, tt.toString)),
+        {
+          val values = onChange.map(_.target.asInstanceOf[HTMLSelectElement].value)
+          values.map(s => TableTypes.Supported.find(tt => tt.toString == s)) --> tableFormat.writer
+        }
+      )
+    )
 
     val supportedFunctions = div(
       span(cls:= s"$SpaceOnRight", "Supported functions"),
@@ -175,6 +228,7 @@ object Gui {
       div("Examples:",
         UseFormula("Use fib", sampleFormula, formulaBox),
         UseFormula("Use smile", optimistFormula, formulaBox),
+        UseFormula("Something exotic", countedOnce, formulaBox)
       ),
       supportedFunctions,
       div(
@@ -198,17 +252,19 @@ object Gui {
           minAttr <-- top.signal.map(_.toString),
           inContext(node => node.events(onInput).mapTo(node.ref.value.toInt) --> bottom.writer),
           value <-- bottom.signal.map(_.toString)),
+        selectTableFormat,
       ),
       div(
       child <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
-        .combineWith(start.signal).combineWith(end.signal).combineWith(top.signal).combineWith(bottom.signal).map {
+        .combineWith(start.signal).combineWith(end.signal).combineWith(top.signal).combineWith(bottom.signal)
+        .combineWith(tableFormat.signal).map {
 
-        case ((((Parsed.Success(fun@FunDef(name, variables, expression), index), startValue), endValue), topValue), bottomValue)
+        case (((((Parsed.Success(fun@FunDef(name, variables, expression), index), startValue), endValue), topValue), bottomValue), format)
           if variables.lengthIs == 2 =>
-          showTable(fun, name, startValue, endValue, topValue, bottomValue)
-        case ((((Parsed.Success(expr, index), startValue), endValue), topValue), bottomValue)
+          showTable(fun, name, startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Full00))
+        case (((((Parsed.Success(expr, index), startValue), endValue), topValue), bottomValue), format)
           if collectVariables(expr).sizeIs == 2 =>
-          showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue)
+          showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Full00))
       }
       ),
       canvas(idAttr := "innerCanvas"),
