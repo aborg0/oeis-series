@@ -349,6 +349,22 @@ object Evaluator extends Evaluator {
               )
             )
           ),
+          FunDef(
+            FuncName("chooseRec"),
+            Var("n") :: Var("k") :: Nil,
+            IfElse(
+              Or(Less(Var("k"), Const(0)), Greater(Var("k"), Var("n"))),
+              Const(0),
+              IfElse(
+                Or(Equal(Var("k"), Const(0)), Equal(Var("k"), Var("n"))),
+                Const(1),
+                Sum(FunRef(Left(FuncName("chooseRec")),
+                           Minus(Var("n"), Const(1)), Minus(Var("k"), Const(1))),
+                  FunRef(Left(FuncName("chooseRec")),
+                    Minus(Var("n"), Const(1)), Var("k")))
+              )
+            )
+          ),
           //          FunDef(
           //            FuncName("choose_k"),
           //            Var("k") :: Nil,

@@ -37,7 +37,7 @@ object TableTypes {
   final case object CenterAlignedTriangle extends Triangle
   final case object RightSideCenterAlignedTriangle extends Triangle
 
-  val Supported: Seq[TableTypes] = Seq(Full11, LeftAlignedTriangle/*, CenterAlignedTriangle*/)
+  val Supported: Seq[TableTypes] = Seq(CenterAlignedTriangle, Full11, LeftAlignedTriangle, RightSideCenterAlignedTriangle)
 }
 
 object Gui {
@@ -46,7 +46,8 @@ object Gui {
 
   private val sampleFormula   = "fib(n) := {n = 0: 0; n = 1: 1; : fib(n-1) + fib(n-2)}"
   private val optimistFormula = "optimist(n):=n^3-33*n^2"
-  private val countedOnce     = "betweenAdjacentSameDenominatorsCountedOnce(n, m)"
+  private val countedOnce     = "betweenAdjacentSameDenominatorsCountedOnce(m, n)"
+  private val chooseFormula   = "ch(n, k) := { k = 0 or k >= n: 0; k =1: 1; : ch(n - 1, k- 1) + ch(n -1, k)}"
 
   class InputBox private ( // create instances of InputBox using InputBox.apply only
       val node: Div, // consumers should add this element into the tree
@@ -81,7 +82,7 @@ object Gui {
     val start = Var(1) // model for the first label (inclusive)
     val end = Var(44) // model for the last label (inclusive)
     val top = Var(1) // model for the first row (inclusive)
-    val bottom = Var(44) // model for the last row (inclusive)
+    val bottom = Var(24) // model for the last row (inclusive)
 
     val formulaBox = InputBox("Formula:", sizeOfTextBox = 111)
     val tableFormat = Var(None: Option[TableTypes])
@@ -143,7 +144,7 @@ object Gui {
             m => tr(th(td(m.toString)), labelsKeys.map {
               n => Try(
                 evaluator
-                  .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                  .evaluate(FunRef(Left(name), Const(m), Const(n)),
                     EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
                   .toDouble).toOption.fold(td())(v => td(v.toString))
             })
@@ -153,20 +154,31 @@ object Gui {
             m => tr(th(td(m.toString)), labelsKeys.filter(_ <= m).map {
               n => Try(
                 evaluator
-                  .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                  .evaluate(FunRef(Left(name), Const(m), Const(n)),
                     EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
                   .toDouble).toOption.fold(td())(v => td(v.toString))
             })
           })
         case TableTypes.CenterAlignedTriangle =>
-          table(tr(td(), labelsKeys.map(h => th(td(String.format(s"%1$$${bottomValue.toString.length}s", h.toString).replace(" ", "0"))))),
+          table(//tr(td(), labelsKeys.map(h => th(td(String.format(s"%0${bottomValue.toString.length}d", h.toString))))),
             rowKeys.map {
-            m => tr(th(td(m.toString)), labelsKeys.filter(_ <= m).map {
+            m => tr(th(td(m.toString)), Seq.fill(bottomValue - m)(td()) ++ labelsKeys.filter(_ <= m).flatMap {
               n => Try(
                 evaluator
-                  .evaluate(FunRef(Left(name), Const(n), Const(m)),
+                  .evaluate(FunRef(Left(name), Const(m), Const(n)),
                     EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
-                  .toDouble).toOption.fold(td())(v => td(v.toString))
+                  .toDouble).toOption.fold(Seq(td(), td()))(v => Seq(td(v.toString), td()))
+            })
+          })
+        case TableTypes.RightSideCenterAlignedTriangle =>
+          table(//tr(td(), labelsKeys.map(h => th(td(String.format(s"%0${bottomValue.toString.length}d", h.toString))))),
+            rowKeys.map {
+            m => tr(th(td(m.toString)), Seq.fill((bottomValue - m) % 2)(td()) ++ labelsKeys.filter(k => (m == 0 && k == 0) || (k <= m && k > (m -1) / 2)).flatMap {
+              n => Try(
+                evaluator
+                  .evaluate(FunRef(Left(name), Const(m), Const(n)),
+                    EvalContext(numCtx = Map.empty, funcCtx = defaultCtx.funcCtx ++ Map(name -> fun), predCtx = Map.empty))
+                  .toDouble).toOption.fold(Seq(td(), td()))(v => Seq(td(v.toString), td()))
             })
           })
       }
@@ -228,7 +240,8 @@ object Gui {
       div("Examples:",
         UseFormula("Use fib", sampleFormula, formulaBox),
         UseFormula("Use smile", optimistFormula, formulaBox),
-        UseFormula("Something exotic", countedOnce, formulaBox)
+        UseFormula("Something exotic", countedOnce, formulaBox),
+        UseFormula("Use choose", chooseFormula, formulaBox),
       ),
       supportedFunctions,
       div(
@@ -261,10 +274,10 @@ object Gui {
 
         case (((((Parsed.Success(fun@FunDef(name, variables, expression), index), startValue), endValue), topValue), bottomValue), format)
           if variables.lengthIs == 2 =>
-          showTable(fun, name, startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Full00))
+          showTable(fun, name, startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Supported.head))
         case (((((Parsed.Success(expr, index), startValue), endValue), topValue), bottomValue), format)
           if collectVariables(expr).sizeIs == 2 =>
-          showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Full00))
+          showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Supported.head))
       }
       ),
       canvas(idAttr := "innerCanvas"),
