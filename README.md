@@ -10,7 +10,7 @@ Demo site: https://aborg0.github.io/oeis-series/
 
 Use the sbt task `oeisSeriesJS/fastOptJS::webpack` to generate the necessary js files
 
-###Usage
+***Usage***
 
 Try the following:
 
@@ -82,12 +82,14 @@ Try the following:
  - ... Note that `3 = 1*3`, `8 = 2*4`, `15 * 3*5`, `24 = 4*6`, `35 = 5*7`, `48 = 6*8`, ...
  
  - Check the rows for primes of the `betweenAdjacentSameDenominatorsCountedEach`:
+   - `same(m) := betweenAdjacentSameDenominatorsCountedEach(3, m)`
+     - `same(m) := betweenAdjacentSameDenominatorsCountedEach(4, m)`!
    - `same(m) := betweenAdjacentSameDenominatorsCountedEach(5, m)`
    - `same(m) := betweenAdjacentSameDenominatorsCountedEach(7, m)`
    - `same(m) := betweenAdjacentSameDenominatorsCountedEach(11, m)`
    - `same(m) := betweenAdjacentSameDenominatorsCountedEach(13, m)`
    - `same(m) := betweenAdjacentSameDenominatorsCountedEach(17, m)`
-   - ...
+   - ... (It is not too hard to prove that this is always the same `(p-1)/2` for odd prime `p`, except for the number of fractions (with denominator less than `p`) between `0` and `1/p` and `(p-1)/p` and `1` as there are `0`.)
  - Let's see some Carmichael numbers too:
    - `notsame(m) := betweenAdjacentSameDenominatorsCountedEach(561, m)`
    - `notsame(m) := betweenAdjacentSameDenominatorsCountedEach(1105, m)`
