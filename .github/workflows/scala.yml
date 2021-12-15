@@ -44,7 +44,7 @@ jobs:
         EOL
     - name: GitHub Pages
       if: success()
-      uses: crazy-max/ghaction-github-pages@v1.3.0
+      uses: crazy-max/ghaction-github-pages@v2
       with:
         # GitHub repository where assets will be deployed (default current)
 #        repo: # optional
@@ -65,4 +65,4 @@ jobs:
         # Write the given domain name to the CNAME file
 #        fqdn: # optional
       env:
-        GITHUB_PAT: ${{ secrets.PAT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
