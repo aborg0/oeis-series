@@ -49,7 +49,7 @@ lazy val oeisSeriesJS = oeisSeries.js
     ),
     Compile / npmDevDependencies ++= Seq(
     ),
-    version in webpack := "4.42.1",
+    webpack / version := "4.42.1",
     libraryDependencies += "com.raquo" %%% "laminar" % "0.11.0",
     libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.0.0",
   )
