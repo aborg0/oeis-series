@@ -11,6 +11,9 @@ class EvaluatorTest extends AnyFunSpec with ScalaCheckDrivenPropertyChecks {
   describe("Evaluator") {
     describe("built-in AST operations") {
       describe("mod") {
+        it("should compute correct values for 4 mod 3") {
+          assert(Evaluator.evaluate(Mod(Const(4), Const(3)), EvalContext.empty) === 1)
+        }
         forAll { (i: Int, j: Int) =>
           whenever(j != 0) {
             it(s"should compute correct values for $i, $j",
