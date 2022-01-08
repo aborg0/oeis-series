@@ -2,8 +2,8 @@ name := "oeis-series"
 
 version := "0.1"
 
-scalaVersion := "2.13.4"
-ThisBuild / scalaVersion := "2.13.4"
+scalaVersion := "2.13.7"
+ThisBuild / scalaVersion := "2.13.7"
 
 lazy val root = project.in(file(".")).
   aggregate(oeisSeries.js, oeisSeries.jvm).
@@ -50,6 +50,6 @@ lazy val oeisSeriesJS = oeisSeries.js
     Compile / npmDevDependencies ++= Seq(
     ),
     webpack / version := "4.42.1",
-    libraryDependencies += "com.raquo" %%% "laminar" % "0.11.0",
-    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "1.0.0",
+    libraryDependencies += "com.raquo" %%% "laminar" % "0.14.2",
+    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.0.0",
   )
