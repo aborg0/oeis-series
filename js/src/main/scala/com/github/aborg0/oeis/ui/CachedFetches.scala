@@ -1,8 +1,9 @@
 package com.github.aborg0.oeis.ui
 
-import com.raquo.airstream.eventstream.EventStream
-import com.raquo.airstream.signal.{Signal, Var}
-import org.scalajs.dom.experimental.Fetch
+import com.raquo.airstream.core.EventStream
+import com.raquo.airstream.core.Signal
+import com.raquo.airstream.state.Var
+import org.scalajs.dom.Fetch
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits._

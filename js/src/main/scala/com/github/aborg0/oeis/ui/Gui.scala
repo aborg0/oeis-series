@@ -72,7 +72,7 @@ object Gui {
   object UseFormula {
     def apply(buttonText: String, formula: String, formulaBox: InputBox): Div = {
       div(span(cls := s"formula $SpaceOnRight", formula),
-        button(buttonText, onClick.mapToValue(formula) --> formulaBox.bus.writer))
+        button(buttonText, onClick.mapToValue --> formulaBox.bus.writer))
     }
   }
 
@@ -221,7 +221,7 @@ object Gui {
         },
         // Replace with empty selection on change from other sources on formulaBox
         inContext(node => value <--
-          formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapToValue("")
+          formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }//.mapToValue
         )
       ),
       span(child <-- checkOnOeisHref.signal.map(hrefValue => if (hrefValue.isEmpty) "" else
@@ -272,10 +272,10 @@ object Gui {
         .combineWith(start.signal).combineWith(end.signal).combineWith(top.signal).combineWith(bottom.signal)
         .combineWith(tableFormat.signal).map {
 
-        case (((((Parsed.Success(fun@FunDef(name, variables, expression), index), startValue), endValue), topValue), bottomValue), format)
+        case (Parsed.Success(fun@FunDef(name, variables, expression), index), startValue, endValue, topValue, bottomValue, format)
           if variables.lengthIs == 2 =>
           showTable(fun, name, startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Supported.head))
-        case (((((Parsed.Success(expr, index), startValue), endValue), topValue), bottomValue), format)
+        case (Parsed.Success(expr, index), startValue, endValue, topValue, bottomValue, format)
           if collectVariables(expr).sizeIs == 2 =>
           showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Supported.head))
       }
@@ -284,11 +284,11 @@ object Gui {
       child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
         .combineWith(start.signal).combineWith(end.signal).map {
 
-        case ((Parsed.Success(fun @ FunDef(name, variables, expression), index), startValue), endValue)
+        case (Parsed.Success(fun @ FunDef(name, variables, expression), index), startValue, endValue)
           if variables.lengthIs <= 1 =>
           showFunDef(fun, name, startValue, endValue)
           ""
-        case ((Parsed.Success(expr, index), startValue), endValue) if collectVariables(expr).sizeIs <= 1 =>
+        case (Parsed.Success(expr, index), startValue, endValue) if collectVariables(expr).sizeIs <= 1 =>
           showFunDef(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue)
           ""
         case _ =>
