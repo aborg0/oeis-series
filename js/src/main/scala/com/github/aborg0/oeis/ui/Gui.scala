@@ -72,7 +72,7 @@ object Gui {
   object UseFormula {
     def apply(buttonText: String, formula: String, formulaBox: InputBox): Div = {
       div(span(cls := s"formula $SpaceOnRight", formula),
-        button(buttonText, onClick.mapToValue --> formulaBox.bus.writer))
+        button(buttonText, onClick.mapTo(formula) --> formulaBox.bus.writer))
     }
   }
 
@@ -221,7 +221,7 @@ object Gui {
         },
         // Replace with empty selection on change from other sources on formulaBox
         inContext(node => value <--
-          formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }//.mapToValue
+          formulaBox.bus.events.collect{ case formula if formula != node.ref.value => node.ref.value }.mapTo("")
         )
       ),
       span(child <-- checkOnOeisHref.signal.map(hrefValue => if (hrefValue.isEmpty) "" else
