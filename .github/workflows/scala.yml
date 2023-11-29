@@ -20,7 +20,7 @@ jobs:
     - name: Run tests
       run: sbt test
     - name: fastOptJS
-      run: sbt oeisSeriesJS/fastOptJS::webpack
+      run: NODE_OPTIONS=--openssl-legacy-provider sbt oeisSeriesJS/fastOptJS::webpack
     - name: Copy to public
       run: |
         mkdir -p public/src/test/html
