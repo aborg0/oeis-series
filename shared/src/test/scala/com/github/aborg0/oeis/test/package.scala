@@ -21,7 +21,7 @@ package object test {
       val seen = scala.collection.mutable.Set.empty[A]
       import WheneverAsserting._
       implicit val configX: self.PropertyCheckConfiguration = config.asInstanceOf[self.PropertyCheckConfiguration]
-      self.forAll { n: A =>
+      self.forAll { (n: A) =>
         self.whenever(!seen.contains(n))({
           seen += n
           fun

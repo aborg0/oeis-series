@@ -39,7 +39,7 @@ class EvaluatorTest extends AnyFunSpec with ScalaCheckDrivenPropertyChecks {
         }
 
         it(s"should compute n for any positive n, when m=0", Tags.Generated) {
-          this.forAllDistinct { n: Int =>
+          this.forAllDistinct{ (n: Int) =>
             whenever(n >= 0) {
               assert(gcdEval(n, 0) === n)
             }

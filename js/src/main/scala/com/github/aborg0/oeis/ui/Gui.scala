@@ -10,7 +10,7 @@ import com.github.aborg0.oeis.ui.ChartJsHelpers.LabelElem
 import com.raquo.laminar.api.L._
 import fastparse.Parsed
 import org.scalajs.dom.{document, html}
-import org.scalajs.dom.raw.HTMLCanvasElement
+import org.scalajs.dom.HTMLCanvasElement
 import typings.chartJs.mod._
 import typings.std.HTMLSelectElement
 
@@ -102,7 +102,7 @@ object Gui {
         ChartData().setDatasets(
           js.Array[ChartDataSets](
             ChartDataSets()
-              .setLabel(name.name)
+              .setLabel(nameAttr.name)
               .setBackgroundColor("rgb(0, 0, 0)")
                 .setType(ChartType.scatter)
               .setData(js.Array())
@@ -213,11 +213,10 @@ object Gui {
             },
         {
           val values = onChange.map(_.target.asInstanceOf[HTMLSelectElement].value)
-          Seq(values --> formulaBox.bus.writer, values.collect{
+          /*Seq(*/values --> formulaBox.bus.writer/*, values.collect{ // TODO re-enable to link to oeis.org
             case v if v.startsWith("A") && v.lengthIs == 7 => s"https://oeis.org/$v"
             case _ => ""
-          } --> checkOnOeisHref.writer)
-
+          } --> checkOnOeisHref.writer)*/
         },
         // Replace with empty selection on change from other sources on formulaBox
         inContext(node => value <--
@@ -280,7 +279,7 @@ object Gui {
           showTable(FunDef(FuncName("f"), collectVariables(expr).toSeq, expr), FuncName("f"), startValue, endValue, topValue, bottomValue, format.getOrElse(TableTypes.Supported.head))
       }
       ),
-      canvas(idAttr := "innerCanvas"),
+      canvasTag(idAttr := "innerCanvas"),
       child.text <-- parsedFormulaStream.startWith(ExpressionParser.parseFormula("")(ParseContext.empty))
         .combineWith(start.signal).combineWith(end.signal).map {
 

@@ -7,7 +7,7 @@ import com.github.aborg0.oeis.eval.EvaluatorMemo.MemoizedContext
 import monocle._
 import monocle.macros._
 
-class EvaluatorMemo(private var ctx: MemoizedContext) extends Evaluator {
+class EvaluatorMemo private(private var ctx: MemoizedContext) extends Evaluator {
   import EvaluatorMemo._
   override protected def evaluateFunction(ctx: EvalContext, func: Either[FuncName, FunDef], args: Expression*): T = {
     func match {

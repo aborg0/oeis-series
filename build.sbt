@@ -2,8 +2,8 @@ name := "oeis-series"
 
 version := "0.1"
 
-scalaVersion := "2.13.7"
-ThisBuild / scalaVersion := "2.13.7"
+scalaVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.3.1"
 
 lazy val root = project.in(file(".")).
   aggregate(oeisSeries.js, oeisSeries.jvm).
@@ -12,19 +12,19 @@ lazy val root = project.in(file(".")).
     publishLocal := {},
   )
 
-val monocleVersion = "2.1.0"
+val monocleVersion = "3.2.0"
 
 lazy val oeisSeries = crossProject(JSPlatform, JVMPlatform).in(file(".")).
   settings(
     name := "oeis-series",
     version := "0.1-SNAPSHOT",
-    libraryDependencies += "com.lihaoyi" %%% "fastparse" % "2.3.0",
-    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
-    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion,
-    libraryDependencies += "com.github.julien-truffaut" %%% "monocle-law" % monocleVersion % "test",
-    libraryDependencies += "org.scalactic" %%% "scalactic" % "3.2.2",
-    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.2" % "test",
-    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-15" % "3.2.3.0" % "test",
+    libraryDependencies += "com.lihaoyi" %%% "fastparse" % "3.0.2",
+    libraryDependencies += "dev.optics" %%% "monocle-core" % monocleVersion,
+    libraryDependencies += "dev.optics" %%% "monocle-macro" % monocleVersion,
+    libraryDependencies += "dev.optics" %%% "monocle-law" % monocleVersion % "test",
+    libraryDependencies += "org.scalactic" %%% "scalactic" % "3.2.17",
+    libraryDependencies += "org.scalatest" %%% "scalatest" % "3.2.17" % "test",
+    libraryDependencies += "org.scalatestplus" %%% "scalacheck-1-17" % "3.2.17.0" % "test",
   ).
   jvmSettings(
     // Add JVM-specific settings here
@@ -49,7 +49,7 @@ lazy val oeisSeriesJS = oeisSeries.js
     ),
     Compile / npmDevDependencies ++= Seq(
     ),
-    webpack / version := "4.42.1",
-    libraryDependencies += "com.raquo" %%% "laminar" % "0.14.2",
-    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.0.0",
+//    webpack / version := "4.42.1",
+    libraryDependencies += "com.raquo" %%% "laminar" % "16.0.0",
+    libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "2.8.0",
   )

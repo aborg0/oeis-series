@@ -24,12 +24,12 @@ jobs:
     - name: Copy to public
       run: |
         mkdir -p public/src/test/html
-        mkdir -p public/target/scala-2.13/scalajs-bundler/main
+        mkdir -p public/target/scala-3.3.1/scalajs-bundler/main
         cp js/src/test/html/index-dev.html public/src/test/html/index-dev.html
-        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js
-        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js.map public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt.js.map
-        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js
-        cp js/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js.map public/target/scala-2.13/scalajs-bundler/main/oeis-series-fastopt-bundle.js.map
+        cp js/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt.js public/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt.js
+        cp js/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt.js.map public/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt.js.map
+        cp js/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt-bundle.js public/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt-bundle.js
+        cp js/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt-bundle.js.map public/target/scala-3.3.1/scalajs-bundler/main/oeis-series-fastopt-bundle.js.map
         cat > public/index.html <<EOL
                   <!doctype html>
                   <html>
