@@ -17,6 +17,8 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 11
+    - name: Set up SBT
+      uses: actions/setup-scala@v2
     - name: Run tests
       run: sbt test
     - name: fastOptJS
@@ -37,7 +39,7 @@ jobs:
                       <title>GitHub Pages deployed!</title>
                     </head>
                     <body>
-                      <p>GitHub Pages with <strong>${{ github.sha }}</strong> commit ID has been deployed through <a href="https://github.com/marketplace/actions/github-pages">GitHub Pages action</a> successfully.</p>
+                      <p>GitHub Pages with <strong>${{ github.sha }}</strong> commit ID has been deployed through <a href="https://github.com/marketplace/actions/github-pages">GitHub Pages action</a>.</p>
                       <p><a href="src/test/html/index-dev.html">DEV version</a> is available!</p>
                     </body>
                   </html>
@@ -46,23 +48,6 @@ jobs:
       if: success()
       uses: crazy-max/ghaction-github-pages@v2
       with:
-        # GitHub repository where assets will be deployed (default current)
-#        repo: # optional
-        # Git branch where assets will be deployed
-#        target_branch: # optional, default is gh-pages
-        # Create incremental commit instead of doing push force
-#        keep_history: # optional, default is false
-        # Allow an empty commit to be created
-#        allow_empty_commit: # optional, default is true
-        # Build directory to deploy
         build_dir: public
-        # Commit author's name
-#        committer_name: # optional
-        # Commit author's email
-#        committer_email: # optional
-        # Commit message
-#        commit_message: # optional
-        # Write the given domain name to the CNAME file
-#        fqdn: # optional
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
