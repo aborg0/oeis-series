@@ -2,9 +2,9 @@ name: Scala CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master ]
 
 jobs:
   build:
@@ -18,7 +18,9 @@ jobs:
       with:
         java-version: 11
     - name: Set up SBT
-      uses: actions/setup-scala@v2
+      uses: olafurpg/setup-scala@v14
+      with:
+        sbt-version: '1.9.7'
     - name: Run tests
       run: sbt test
     - name: fastOptJS
