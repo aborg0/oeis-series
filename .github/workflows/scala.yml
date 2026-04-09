@@ -22,6 +22,8 @@ jobs:
       with:
         sbt-version: '1.9.7'
     - name: Run tests
+      env:
+        SBT_OPTS: '-Xmx3g'
       run: sbt test
     - name: fastOptJS
       run: NODE_OPTIONS=--openssl-legacy-provider sbt oeisSeriesJS/fastOptJS::webpack
@@ -41,7 +43,7 @@ jobs:
                       <title>GitHub Pages deployed!</title>
                     </head>
                     <body>
-                      <p>GitHub Pages with <strong>${{ github.sha }}</strong> commit ID has been deployed through <a href="https://github.com/marketplace/actions/github-pages">GitHub Pages action</a>.</p>
+                      <p>GitHub Pages with <strong>${{ github.sha }}</strong> commit ID has been deployed through <a href="https://github.com/marketplace/actions/github-pages">GitHub Pages action
                       <p><a href="src/test/html/index-dev.html">DEV version</a> is available!</p>
                     </body>
                   </html>
